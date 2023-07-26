@@ -1,1 +1,1 @@
-# dashboard-semantic-api-layer
+# dashboard-semantic-layer
