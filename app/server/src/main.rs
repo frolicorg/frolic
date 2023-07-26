@@ -1,10 +1,8 @@
 use actix_web::{get, post, web, Result, App, HttpResponse, HttpServer, Responder};
-// use serde::Deserialize;
 
 mod models;
 use models::RESTInputModel;
 
-/// extract `Info` using serde
 async fn rest_api(info: web::Json<RESTInputModel>) -> Result<String> {
     Ok(format!("Welcome {}!", info.Metrics[0].Field))
 }
@@ -14,13 +12,17 @@ async fn hello() -> impl Responder {
     HttpResponse::Ok().body("Hello world!")
 }
 
+#[post("/echo")]
+async fn echo(req_body: String) -> impl Responder {
+    HttpResponse::Ok().body(req_body)
+}
+
 async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
-#[post("/echo")]
-async fn echo(req_body: String) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
+struct AppState {
+    app_name: String,
 }
 
 #[actix_web::main]
@@ -33,7 +35,7 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .service(echo)
             .route("/api", web::post().to(rest_api))
-            .route("/hello", web::get().to(manual_hello))
+            .route("/hey", web::get().to(manual_hello))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
