@@ -2,9 +2,11 @@ use actix_web::{get, post, web, Result, App, HttpResponse, HttpServer, Responder
 
 mod models;
 use models::RESTInputModel;
+mod query_engine;
 
-async fn rest_api(info: web::Json<RESTInputModel>) -> Result<String> {
-    Ok(format!("Welcome {}!", info.Metrics[0].Field))
+async fn rest_api(jsonQuery: web::Json<RESTInputModel>) -> Result<String> {
+    let sql = query_engine::GetQuery(&jsonQuery);
+    Ok(format!("SQL: \n{}!", sql))
 }
 
 #[get("/")]
