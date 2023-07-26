@@ -13,12 +13,43 @@ pub fn GetQuery(query: &models::RESTInputModel) -> String {
 pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
     let mut sql_columns = Vec::new();
     let valid_aggregations = ["sum", "avg", "count", "max", "min"]; 
+    // let mut uppercase_aggregate = String::new();
+    // let mut aggregate_str =  String::new();
+    // for metric in metrics {
+    //     match &metric.AggregateOperator {
+    //         Some(operator) => {
+    //             let uppercase_aggregate = operator.to_uppercase();
+    //             let aggregate_str = operator.as_str();
+    //             println!("{}",aggregate_str)
+    //         }
+    //         None => println!("No aggregate operator."),
+    //     }
+
+    //     if valid_aggregations.contains(&aggregate_str.as_str()) {
+    //         let column_sql = format!("{}({})", uppercase_aggregate, metric.Field);
+    //         sql_columns.push(column_sql);
+    //     } else {
+    //         eprintln!("Unknown aggregation function for column '{}'", metric.Field);
+    //     }
+    // }
     for metric in metrics {
-        if valid_aggregations.contains(&metric.AggregateOperator.as_str()) {
-            let column_sql = format!("{}({})", metric.AggregateOperator.to_uppercase(), metric.Field);
-            sql_columns.push(column_sql);
-        } else {
-            eprintln!("Unknown aggregation function for column '{}'", metric.Field);
+        match &metric.AggregateOperator {
+            Some(operator) => {
+                let uppercase_aggregate = operator.to_uppercase();
+                let aggregate_str = operator.as_str();
+                println!("{}", aggregate_str);
+    
+                if valid_aggregations.contains(&aggregate_str) {
+                    let column_sql = format!("{}({})", uppercase_aggregate, metric.Field);
+                    sql_columns.push(column_sql);
+                } else {
+                    eprintln!("Unknown aggregation function for column '{}'", metric.Field);
+                }
+            }
+            None => {
+                let column_sql = format!("({})", metric.Field);
+                sql_columns.push(column_sql);
+            }
         }
     }
     sql_columns.join(", ")
@@ -28,12 +59,23 @@ pub fn dimensions_to_sql(dimensions: &Vec<Dimension>) -> String {
     let mut sql_columns = Vec::new();
     let valid_transformations = ["year", "month"]; 
     for dimension in dimensions {
-        if valid_transformations.contains(&dimension.Transformations.as_str()) {
-            let column_sql = format!("{}({})", dimension.Transformations.to_uppercase(), dimension.Field);
-            sql_columns.push(column_sql);
-        } else {
-            eprintln!("Unknown aggregation function for column '{}'", dimension.Field);
+        match &dimension.Transformations {
+            Some(operator) => {
+                let uppercase_transformation = operator.to_uppercase();
+                let transformation_str = operator.as_str();
+                if valid_transformations.contains(&transformation_str) {
+                    let column_sql = format!("{}({})", uppercase_transformation, dimension.Field);
+                    sql_columns.push(column_sql);
+                } else {
+                    eprintln!("Unknown aggregation function for column '{}'", dimension.Field);
+                }
+            }
+            None => {
+                let column_sql = format!("({})", dimension.Field);
+                sql_columns.push(column_sql);
+            }
         }
+
     }
     sql_columns.join(", ")
 }
