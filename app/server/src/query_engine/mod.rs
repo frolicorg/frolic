@@ -1,37 +1,29 @@
 use crate::models;
-use models::{Metric,Dimension};
+use models::{Metric,Dimension,Filter};
 
 pub fn GetQuery(query: &models::RESTInputModel) -> String {
     let result = "Hello from my_function!".to_string();
     // query.Metrics[0].Field.to_string()
     let metrics = metrics_to_sql(&query.Metrics);
     let dimensions = dimensions_to_sql(&query.Dimensions);
-    format!("{}{}", metrics, dimensions) 
+    let filters = if let Some(filters) = &query.Filters {
+        filters_to_sql(filters)
+    } else {
+        String::new()
+        // Define a default behavior or an empty filter list if there's no data.
+        // For example, you can return an empty vector:
+        // Vec::new()
+    };
+    // let filters = filters_to_sql(&query.Filters);
+    // let filters = filters_to_sql(&query.Filters);
+    format!("select {}, {} from table where {} group by {}", metrics, dimensions,filters,dimensions) 
 }
 
 // Function to convert metrics to SQL columns string.
 pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
     let mut sql_columns = Vec::new();
     let valid_aggregations = ["sum", "avg", "count", "max", "min"]; 
-    // let mut uppercase_aggregate = String::new();
-    // let mut aggregate_str =  String::new();
-    // for metric in metrics {
-    //     match &metric.AggregateOperator {
-    //         Some(operator) => {
-    //             let uppercase_aggregate = operator.to_uppercase();
-    //             let aggregate_str = operator.as_str();
-    //             println!("{}",aggregate_str)
-    //         }
-    //         None => println!("No aggregate operator."),
-    //     }
 
-    //     if valid_aggregations.contains(&aggregate_str.as_str()) {
-    //         let column_sql = format!("{}({})", uppercase_aggregate, metric.Field);
-    //         sql_columns.push(column_sql);
-    //     } else {
-    //         eprintln!("Unknown aggregation function for column '{}'", metric.Field);
-    //     }
-    // }
     for metric in metrics {
         match &metric.AggregateOperator {
             Some(operator) => {
@@ -78,6 +70,47 @@ pub fn dimensions_to_sql(dimensions: &Vec<Dimension>) -> String {
 
     }
     sql_columns.join(", ")
+}
+
+pub fn filters_to_sql(filters: &Vec<Filter>) -> String {
+    let mut sql_filters = Vec::new();
+    let valid_operators = [">", "<", "="]; 
+
+    for filter in filters {
+
+        if valid_operators.contains(&filter.FilterOperator.as_str()){
+            let filter_sql = format!(
+                "{} {} {}", 
+                dimensions_to_sql(&vec![filter.Dimension.clone()]), 
+                filter.FilterOperator.to_uppercase(),
+                filter.FilterValue
+            );
+            sql_filters.push(filter_sql)
+        }
+        else{
+            eprintln!("Unknown filter operator for column '{}'", filter.Dimension.Field);
+        }
+
+        // match &filter.FilterOperator {
+        //     Some(operator) => {
+        //         let uppercase_aggregate = operator.to_uppercase();
+        //         let aggregate_str = operator.as_str();
+        //         println!("{}", aggregate_str);
+    
+        //         if valid_aggregations.contains(&aggregate_str) {
+        //             let column_sql = format!("{}({})", uppercase_aggregate, metric.Field);
+        //             sql_columns.push(column_sql);
+        //         } else {
+        //             eprintln!("Unknown aggregation function for column '{}'", metric.Field);
+        //         }
+        //     }
+        //     None => {
+        //         let column_sql = format!("({})", metric.Field);
+        //         sql_columns.push(column_sql);
+        //     }
+        // }
+    }
+    sql_filters.join(", ")
 }
 
 
