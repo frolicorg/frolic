@@ -35,6 +35,14 @@ impl actix_web::ResponseError for PersistenceError {
     }
 }
 
+pub fn execute_query(query: &String, pool: &mysql::Pool) -> Result<ResponseData, PersistenceError> {
+    let mut conn = pool.get_conn()?;
+
+    Ok(ResponseData {
+        data: run_query(&query, &mut conn)?,
+    })
+}
+
 fn run_query(
     query: &String,
     conn: &mut mysql::PooledConn,
@@ -45,15 +53,7 @@ fn run_query(
     })
 }
 
-pub fn execute_query(query: &String, pool: &mysql::Pool) -> Result<ResponseData, PersistenceError> {
-    let mut conn = pool.get_conn()?;
-
-    Ok(ResponseData {
-        data: run_query(&query, &mut conn)?,
-    })
-}
-
-pub fn sql_row_to_string_list(row: mysql::Row) -> Vec<String> {
+fn sql_row_to_string_list(row: mysql::Row) -> Vec<String> {
     let mut string_list = Vec::new();
 
     for (index, column) in row.columns_ref().iter().enumerate() {

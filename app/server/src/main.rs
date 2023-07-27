@@ -1,10 +1,9 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
 use env_logger;
 use log;
+use models::{RESTInputModel, ResponseData, ResponseItem};
 use mysql::prelude::Queryable;
 use std::env;
-
-use models::{RESTInputModel, ResponseData, ResponseItem};
 mod db_utils;
 mod models;
 mod query_engine;
