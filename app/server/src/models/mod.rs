@@ -9,10 +9,11 @@ pub struct RESTInputModel {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Metric {
     pub Field: String,
-    pub AggregateOperator: String,
+    pub AggregateOperator: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Dimension {
     pub Field: String,
+    pub Transformations: Option<String>,
 }
