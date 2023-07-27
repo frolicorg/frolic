@@ -1,41 +1,25 @@
 use actix_web::http::StatusCode;
-use actix_web::ResponseError; // Assuming you're using Actix Web
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
 use derive_more::{Display, Error, From};
 use env_logger;
 use log;
 use mysql::prelude::Queryable;
-use serde::{Deserialize, Serialize};
 use std::env;
-use std::error::Error as StdError;
-use std::error::Error;
 mod models;
-use models::RESTInputModel;
-
+use models::{RESTInputModel, ResponseData, ResponseItem};
 mod query_engine;
 
-async fn rest_api(jsonQuery: web::Json<RESTInputModel>) -> Result<String> {
-    let sql = query_engine::GetQuery(&jsonQuery);
-    Ok(format!("SQL: \n{}!", sql))
+#[post("/api")]
+async fn rest_api(json_query: web::Json<RESTInputModel>) -> Result<String> {
+    let sql_query = query_engine::GetQuery(&json_query);
+
+    Ok(format!("SQL: \n{}!", sql_query))
 }
 
-// #[get("/sql")]
-// pub(crate) async fn get_bank(data: web::Data<mysql::Pool>) -> actix_web::Result<impl Responder> {
-//     let conn = data.get_conn()?;
-
-//     Ok(web::Json("1234"))
-// }
-
-#[get("/bank")]
-pub(crate) async fn get_bank(data: web::Data<mysql::Pool>) -> actix_web::Result<impl Responder> {
-    let bank_response_data = web::block(move || get_bank_data(&data)).await??;
-    Ok(web::Json(bank_response_data))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct BankData {
-    pub bank_name: String,
-    pub country: String,
+#[post("/get_query")]
+async fn get_query(json_query: web::Json<RESTInputModel>) -> Result<String> {
+    let sql_query = query_engine::GetQuery(&json_query);
+    Ok(format!("SQL: \n{}!", sql_query))
 }
 
 #[derive(Debug, Display, Error, From)]
@@ -67,36 +51,34 @@ impl actix_web::ResponseError for PersistenceError {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct BankDetails {
-    pub bank_name: String,
-    pub country: String,
+#[get("/sample_query")]
+pub(crate) async fn sample_query(
+    data: web::Data<mysql::Pool>,
+) -> actix_web::Result<impl Responder> {
+    let bank_response_data = web::block(move || get_bank_data(&data)).await??;
+    Ok(web::Json(bank_response_data))
 }
 
-#[derive(Debug, Serialize)]
-pub struct BankResponseData {
-    pub bank_data: Vec<BankDetails>,
-}
-
-pub fn get_bank_data(pool: &mysql::Pool) -> Result<BankResponseData, PersistenceError> {
+pub fn get_bank_data(pool: &mysql::Pool) -> Result<ResponseData, PersistenceError> {
     let mut conn = pool.get_conn()?;
+    let mut query = r"
+        SELECT category, price FROM products
+        "
+    .to_string();
 
-    Ok(BankResponseData {
-        bank_data: select_bank_details(&mut conn)?,
+    Ok(ResponseData {
+        data: run_query(&mut query, &mut conn)?,
     })
 }
 
-/// Lists all banks' details.
-fn select_bank_details(conn: &mut mysql::PooledConn) -> mysql::error::Result<Vec<BankDetails>> {
-    conn.query_map(
-        r"
-        SELECT category, price FROM products
-        ",
-        |(my_bank_name, my_country)| BankDetails {
-            bank_name: my_bank_name,
-            country: my_country,
-        },
-    )
+fn run_query(
+    query: &mut String,
+    conn: &mut mysql::PooledConn,
+) -> mysql::error::Result<Vec<ResponseItem>> {
+    conn.query_map(query, |(my_bank_name, my_country)| ResponseItem {
+        bank_name: my_bank_name,
+        country: my_country,
+    })
 }
 
 #[get("/")]
@@ -107,10 +89,6 @@ async fn hello() -> impl Responder {
 #[post("/echo")]
 async fn echo(req_body: String) -> impl Responder {
     HttpResponse::Ok().body(req_body)
-}
-
-async fn manual_hello() -> impl Responder {
-    HttpResponse::Ok().body("Hey there!")
 }
 
 struct AppState {
@@ -164,9 +142,9 @@ async fn main() -> std::io::Result<()> {
             }))
             .service(hello)
             .service(echo)
-            .service(get_bank)
-            .route("/api", web::post().to(rest_api))
-            .route("/hey", web::get().to(manual_hello))
+            .service(sample_query)
+            .service(get_query)
+            .service(rest_api)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

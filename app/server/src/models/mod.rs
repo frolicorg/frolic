@@ -8,19 +8,13 @@ pub struct RESTInputModel {
     pub Filters: Option<Vec<Filter>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Table {
-    pub name: String,
-    pub relationships: Vec<HashMap<String, (String, String)>>, // Child table -> (Parent column, Child column)
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Metric {
     pub Field: String,
     pub AggregateOperator: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize,Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Dimension {
     pub Field: String,
     pub Transformations: Option<String>,
@@ -33,6 +27,23 @@ pub struct Filter {
     pub FilterValue: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct ResponseItem {
+    pub bank_name: String,
+    pub country: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ResponseData {
+    pub data: Vec<ResponseItem>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Table {
+    pub name: String,
+    pub relationships: Vec<HashMap<String, (String, String)>>, // Child table -> (Parent column, Child column)
+}
+
 impl Table {
     pub fn new(name: &str) -> Self {
         Table {
@@ -41,22 +52,15 @@ impl Table {
         }
     }
 
-    pub fn add_relationship(
-        &mut self,
-        child: &str,
-        parent_column: &str,
-        child_column: &str,
-    ) {
+    pub fn add_relationship(&mut self, child: &str, parent_column: &str, child_column: &str) {
         let mut new_relationship = HashMap::new();
         new_relationship.insert(
             child.to_string(),
-            (
-                parent_column.to_string(),
-                child_column.to_string(),
-            ),
+            (parent_column.to_string(), child_column.to_string()),
         );
         self.relationships.push(new_relationship);
     }
+
     pub fn print_tables(&self) {
         println!("Table: {}", self.name);
         for relationship in &self.relationships {
@@ -69,4 +73,3 @@ impl Table {
         }
     }
 }
-
