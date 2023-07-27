@@ -1,12 +1,16 @@
-use actix_web::{get, post, web, Result, App, HttpResponse, HttpServer, Responder};
-use std::{env};
-use mysql::prelude::Queryable;
-use std::error::Error as StdError;
-use log;
+use actix_web::http::StatusCode;
+use actix_web::ResponseError; // Assuming you're using Actix Web
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
+use derive_more::{Display, Error, From};
 use env_logger;
-
+use log;
+use mysql::prelude::Queryable;
+use serde::{Deserialize, Serialize};
+use std::env;
+use std::error::Error as StdError;
+use std::error::Error;
 mod models;
-use models::{RESTInputModel};
+use models::RESTInputModel;
 
 mod query_engine;
 
@@ -15,11 +19,84 @@ async fn rest_api(jsonQuery: web::Json<RESTInputModel>) -> Result<String> {
     Ok(format!("SQL: \n{}!", sql))
 }
 
-#[get("/sql")]
-pub(crate) async fn get_bank(data: web::Data<mysql::Pool>) -> actix_web::Result<impl Responder> {
-    // let bank_response_data = web::block(move || get_bank_data(&data)).await??;
+// #[get("/sql")]
+// pub(crate) async fn get_bank(data: web::Data<mysql::Pool>) -> actix_web::Result<impl Responder> {
+//     let conn = data.get_conn()?;
 
-    Ok(web::Json("1234"))
+//     Ok(web::Json("1234"))
+// }
+
+#[get("/bank")]
+pub(crate) async fn get_bank(data: web::Data<mysql::Pool>) -> actix_web::Result<impl Responder> {
+    let bank_response_data = web::block(move || get_bank_data(&data)).await??;
+    Ok(web::Json(bank_response_data))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BankData {
+    pub bank_name: String,
+    pub country: String,
+}
+
+#[derive(Debug, Display, Error, From)]
+pub enum PersistenceError {
+    EmptyBankName,
+    EmptyCountry,
+    EmptyBranch,
+    EmptyLocation,
+    EmptyTellerName,
+    EmptyCustomerName,
+    MysqlError(mysql::Error),
+    Unknown,
+}
+
+impl actix_web::ResponseError for PersistenceError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            PersistenceError::EmptyBankName
+            | PersistenceError::EmptyCountry
+            | PersistenceError::EmptyBranch
+            | PersistenceError::EmptyLocation
+            | PersistenceError::EmptyTellerName
+            | PersistenceError::EmptyCustomerName => StatusCode::BAD_REQUEST,
+
+            PersistenceError::MysqlError(_) | PersistenceError::Unknown => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct BankDetails {
+    pub bank_name: String,
+    pub country: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BankResponseData {
+    pub bank_data: Vec<BankDetails>,
+}
+
+pub fn get_bank_data(pool: &mysql::Pool) -> Result<BankResponseData, PersistenceError> {
+    let mut conn = pool.get_conn()?;
+
+    Ok(BankResponseData {
+        bank_data: select_bank_details(&mut conn)?,
+    })
+}
+
+/// Lists all banks' details.
+fn select_bank_details(conn: &mut mysql::PooledConn) -> mysql::error::Result<Vec<BankDetails>> {
+    conn.query_map(
+        r"
+        SELECT category, price FROM products
+        ",
+        |(my_bank_name, my_country)| BankDetails {
+            bank_name: my_bank_name,
+            country: my_country,
+        },
+    )
 }
 
 #[get("/")]

@@ -13,3 +13,4 @@ dotenv = "0.15"
 mysql = "24"
 log = "0.4.19"
 env_logger = "0.9.0" # Add this line
+derive_more = "0.99.17"
