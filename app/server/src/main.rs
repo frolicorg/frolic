@@ -6,7 +6,7 @@ use log;
 use env_logger;
 
 mod models;
-use models::{RESTInputModel, RESTResponseModel};
+use models::{RESTInputModel};
 
 mod query_engine;
 
