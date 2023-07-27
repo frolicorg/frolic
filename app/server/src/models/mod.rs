@@ -13,7 +13,7 @@ pub struct Metric {
     pub AggregateOperator: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize,Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Dimension {
     pub Field: String,
     pub Transformations: Option<String>,
@@ -24,4 +24,9 @@ pub struct Filter {
     pub Dimension: Dimension,
     pub FilterOperator: String,
     pub FilterValue: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RESTResponseModel {
+    pub data: Vec<String>,
 }

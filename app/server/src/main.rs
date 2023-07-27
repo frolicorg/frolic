@@ -1,14 +1,25 @@
 use actix_web::{get, post, web, Result, App, HttpResponse, HttpServer, Responder};
 use std::{env};
+use mysql::prelude::Queryable;
+use std::error::Error as StdError;
+use log;
+use env_logger;
 
 mod models;
-use models::RESTInputModel;
+use models::{RESTInputModel, RESTResponseModel};
 
 mod query_engine;
 
 async fn rest_api(jsonQuery: web::Json<RESTInputModel>) -> Result<String> {
     let sql = query_engine::GetQuery(&jsonQuery);
     Ok(format!("SQL: \n{}!", sql))
+}
+
+#[get("/sql")]
+pub(crate) async fn get_bank(data: web::Data<mysql::Pool>) -> actix_web::Result<impl Responder> {
+    // let bank_response_data = web::block(move || get_bank_data(&data)).await??;
+
+    Ok(web::Json("1234"))
 }
 
 #[get("/")]
@@ -46,14 +57,13 @@ fn get_conn_builder(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-
     // initialize environment
     dotenv::dotenv().ok();
 
     // initialize logger
-    // env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    // log::info!("setting up app from environment");
+    log::info!("setting up app from environment");
 
     let db_user = env::var("MYSQL_USER").expect("MYSQL_USER is not set in .env file");
     let db_password = env::var("MYSQL_PASSWORD").expect("MYSQL_PASSWORD is not set in .env file");
@@ -64,19 +74,20 @@ async fn main() -> std::io::Result<()> {
 
     let builder = get_conn_builder(db_user, db_password, db_host, db_port, db_name);
 
-    // log::info!("initializing database connection");
-
+    log::info!("initializing database connection");
     let pool = mysql::Pool::new(builder).unwrap();
 
     let shared_data = web::Data::new(pool);
 
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
+            .app_data(shared_data.clone())
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Actix Web"),
             }))
             .service(hello)
             .service(echo)
+            .service(get_bank)
             .route("/api", web::post().to(rest_api))
             .route("/hey", web::get().to(manual_hello))
     })
