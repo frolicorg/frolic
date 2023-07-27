@@ -60,15 +60,15 @@ async fn main() -> std::io::Result<()> {
     let db_host = env::var("MYSQL_HOST").expect("MYSQL_HOST is not set in .env file");
     let db_port = env::var("MYSQL_PORT").expect("MYSQL_PORT is not set in .env file");
     let db_name = env::var("MYSQL_DBNAME").expect("MYSQL_DBNAME is not set in .env file");
-    let db_port = db_port.parse().unwrap();
+    // let db_port = db_port.parse().unwrap();
 
-    let builder = get_conn_builder(db_user, db_password, db_host, db_port, db_name);
+    // let builder = get_conn_builder(db_user, db_password, db_host, db_port, db_name);
 
-    // log::info!("initializing database connection");
+    // // log::info!("initializing database connection");
 
-    let pool = mysql::Pool::new(builder).unwrap();
+    // let pool = mysql::Pool::new(builder).unwrap();
 
-    let shared_data = web::Data::new(pool);
+    // let shared_data = web::Data::new(pool);
 
     HttpServer::new(|| {
         App::new()
