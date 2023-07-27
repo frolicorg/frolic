@@ -1,14 +1,12 @@
-use actix_web::http::StatusCode;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
-use derive_more::{Display, Error, From};
 use env_logger;
 use log;
 use mysql::prelude::Queryable;
-use mysql::{from_value_opt, Value};
-
 use std::env;
-mod models;
+
 use models::{RESTInputModel, ResponseData, ResponseItem};
+mod db_utils;
+mod models;
 mod query_engine;
 
 #[post("/api")]
@@ -17,46 +15,14 @@ async fn rest_api(
     data: web::Data<mysql::Pool>,
 ) -> actix_web::Result<impl Responder> {
     let sql_query = query_engine::GetQuery(&json_query);
-
-    let response_data = web::block(move || get_bank_data(&sql_query, &data)).await??;
+    let response_data = web::block(move || db_utils::execute_query(&sql_query, &data)).await??;
     Ok(web::Json(response_data))
-
-    // Ok(format!("SQL: \n{}!", sql_query))
 }
 
 #[post("/get_query")]
 async fn get_query(json_query: web::Json<RESTInputModel>) -> Result<String> {
     let sql_query = query_engine::GetQuery(&json_query);
     Ok(format!("SQL: \n{}!", sql_query))
-}
-
-#[derive(Debug, Display, Error, From)]
-pub enum PersistenceError {
-    EmptyBankName,
-    EmptyCountry,
-    EmptyBranch,
-    EmptyLocation,
-    EmptyTellerName,
-    EmptyCustomerName,
-    MysqlError(mysql::Error),
-    Unknown,
-}
-
-impl actix_web::ResponseError for PersistenceError {
-    fn status_code(&self) -> StatusCode {
-        match self {
-            PersistenceError::EmptyBankName
-            | PersistenceError::EmptyCountry
-            | PersistenceError::EmptyBranch
-            | PersistenceError::EmptyLocation
-            | PersistenceError::EmptyTellerName
-            | PersistenceError::EmptyCustomerName => StatusCode::BAD_REQUEST,
-
-            PersistenceError::MysqlError(_) | PersistenceError::Unknown => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
-        }
-    }
 }
 
 #[get("/sample_query")]
@@ -68,41 +34,8 @@ pub(crate) async fn sample_query(
         "
     .to_string();
 
-    let response_data = web::block(move || get_bank_data(&query, &data)).await??;
+    let response_data = web::block(move || db_utils::execute_query(&query, &data)).await??;
     Ok(web::Json(response_data))
-}
-
-pub fn get_bank_data(query: &String, pool: &mysql::Pool) -> Result<ResponseData, PersistenceError> {
-    let mut conn = pool.get_conn()?;
-
-    Ok(ResponseData {
-        data: run_query(&query, &mut conn)?,
-    })
-}
-
-fn row_to_string_list(row: mysql::Row) -> Vec<String> {
-    let mut string_list = Vec::new();
-
-    for (index, column) in row.columns_ref().iter().enumerate() {
-        if let Some(Ok(value)) = row.get_opt(index) {
-            let value_as_string = from_value_opt::<String>(value);
-            string_list.push(value_as_string.unwrap_or_else(|_| "NULL".to_string()));
-        } else {
-            string_list.push("NULL".to_string());
-        }
-    }
-
-    string_list
-}
-
-fn run_query(
-    query: &String,
-    conn: &mut mysql::PooledConn,
-) -> mysql::error::Result<Vec<ResponseItem>> {
-    conn.query_map(query, |row: mysql::Row| {
-        let test = row_to_string_list(row);
-        ResponseItem { items: test }
-    })
 }
 
 #[get("/")]
