@@ -2,8 +2,7 @@ use crate::models;
 use std::collections::HashMap;
 use models::{Metric,Dimension,Filter,Table};
 
-pub fn GetQuery(query: &models::RESTInputModel) -> String {
-
+pub fn  initiate_tables() -> Vec<Table>{
     let mut tables = vec![
         Table::new("users"),
         Table::new("products"),
@@ -13,19 +12,19 @@ pub fn GetQuery(query: &models::RESTInputModel) -> String {
     //users and orders
     tables[3].add_relationship("users", "user_id", "id");
     tables[0].add_relationship("orders", "id", "user_id");
-    
+
     //products and orders
     tables[3].add_relationship("products","product_id","id");
     tables[1].add_relationship("orders","id","product_id");
-    
+
     //products and reviews
     tables[2].add_relationship("products", "product_id", "id");
     tables[1].add_relationship("reviews", "id", "product_id");
-    // for table in &tables {
-    //     table.print_tables();
-    //     println!();
-    // }
-    //assuming tables variable will be known beforehand and passed here
+    tables
+}
+
+pub fn GetQuery(query: &models::RESTInputModel) -> String {
+    let tables: Vec<Table> = initiate_tables();
     let metric_fields: Vec<String> = query.Metrics.iter().map(|metric| metric.Field.clone()).collect();
     let dimesion_fields: Vec<String> = query.Dimensions.iter().map(|metric| metric.Field.clone()).collect();    
     let metrics_sql = metrics_to_sql(&query.Metrics);
@@ -37,32 +36,25 @@ pub fn GetQuery(query: &models::RESTInputModel) -> String {
     } else {
         String::new()
     };
-    //this fields captures all the column fields that are requested by the user
+    //this field captures all the column fields that are requested by the user
     let mut all_fields: Vec<String> = Vec::new();
     all_fields.extend(metric_fields);
     all_fields.extend(dimesion_fields);
     all_fields.extend(filter_fields);
-
-
-    //get all the table names requested by the user
+    let select_table_sql = all_fields.join (", ");
+    //get all the table names requested by the user & process them
     let required_table_names = extract_table_columns(all_fields);
     let table_sql = handle_required_table(tables, required_table_names);
+    
 
-    // let mysql_query = generate_mysql_join_query(&table_needed);
-    // println!("Generated MySQL query:\n{}", table_sql);
+    //generate final mysql query
     let mut query = String::new();
     if !filters.is_empty() {
-        query = format!("select {}, {} from ({}) where {} group by {}", metrics_sql, dimensions_sql, table_sql, filters, dimensions_sql);
+        query = format!("select {}, {} from {} where {} group by {} ;", metrics_sql, dimensions_sql, table_sql, filters, dimensions_sql);
     }
     else {
-        query = format!("select {}, {} from ({}) group by {}", metrics_sql, dimensions_sql, table_sql, dimensions_sql);
+        query = format!("select {}, {} from {} group by {} ;", metrics_sql, dimensions_sql, table_sql, dimensions_sql);
     }
-    // let query = if !filters.is_empty() {
-    //     format!("select {}, {} from ({}) where {} group by {}", metrics_sql, dimensions_sql, table_sql, filters, dimensions_sql);
-    // } else {
-    //     format!("select {}, {} from ({}) group by {}", metrics_sql, dimensions_sql, table_sql, dimensions_sql);
-    // }
-    // let query = format!("select {}, {} from ({}) group by {}", metrics_sql, dimensions_sql, table_sql, dimensions_sql);
     query
 }
 
@@ -211,48 +203,23 @@ pub fn filters_to_sql(filters: &Vec<Filter>) -> String {
 fn find_relationship<'a>(
     child_table: &str,
     relationships: &'a [HashMap<String, (String, String)>],
-) -> Option<&'a HashMap<String, (String, String)>> {
+    ) -> Option<&'a HashMap<String, (String, String)>> {
     relationships.iter().find(|relationship| relationship.contains_key(child_table))
 }
-
-// Function to check if a relationship exists between two tables
-fn relationship_columns(table1: &Table, table2: &Table) -> Vec<String> {
-    // Check if the child table's name is present in table1's relationships
-    let mut relation = Vec::new();
-    for relationship in &table1.relationships {
-        println!("{}",&table2.name);
-        // println!("{}",relationship.get(&table2.name));
-        if let Some((parent_column, child_column)) = relationship.get(&table2.name) {
-            // println!("{}={}",child_table,&table2.name);
-            // if child_table == &table2.name {
-            //     return true;
-            // }
-            relation.push(parent_column.to_string());
-            relation.push(child_column.to_string());
-            return relation
-            // return parent_column,child_column
-            // return true
-        }
-    }
-    relation
-}
-
 fn generate_join_query(tables: &[Table]) -> Option<String> {
     if tables.is_empty() {
         return None;
     }
 
-    let mut query = format!("SELECT * FROM {}", tables[0].name);
+    let mut query = format!("{}", tables[0].name);
 
     for i in 1..tables.len() {
         let table = &tables[i];
-
         let mut join_found = false;
-
         // Check for relationships with all previously processed tables
         for j in (0..i).rev() {
             let prev_table = &tables[j];
-
+            
             if let Some(relationship) = find_relationship(&table.name, &prev_table.relationships) {
                 let join_condition = relationship
                     .iter()
@@ -269,6 +236,7 @@ fn generate_join_query(tables: &[Table]) -> Option<String> {
         }
 
         if !join_found {
+            println!("{} No Relationship Found",i);
             // If no relationship exists, return None or handle accordingly.
             return None;
         }
@@ -276,37 +244,3 @@ fn generate_join_query(tables: &[Table]) -> Option<String> {
 
     Some(query)
 }
-
-
-
-// fn generate_mysql_join_query(tables: &[Table]) -> String {
-//     let mut query = String::new();
-//     let mut first_table = true;
-//     //check if the relationship exists between the required tables
-
-//     for table in tables {
-//         if !first_table {
-//             query.push_str(" JOIN ");
-//         } else {
-//             first_table = false;
-//         }
-
-//         query.push_str(&table.name);
-//         query.push(' ');
-
-//         if let Some((parent_table, (child_table, parent_column, child_column))) =
-//             table.relationships.iter().next()
-//             {
-//                 query.push_str("ON ");
-//                 query.push_str(&parent_table);
-//                 query.push('.');
-//                 query.push_str(&parent_column);
-//                 query.push_str(" = ");
-//                 query.push_str(&child_table);
-//                 query.push('.');
-//                 query.push_str(&child_column);
-//             }
-//     }
-
-//     query
-// }
