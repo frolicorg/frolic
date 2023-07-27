@@ -29,8 +29,7 @@ pub struct Filter {
 
 #[derive(Debug, Serialize)]
 pub struct ResponseItem {
-    pub bank_name: String,
-    pub country: String,
+    pub items: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]

@@ -4,16 +4,24 @@ use derive_more::{Display, Error, From};
 use env_logger;
 use log;
 use mysql::prelude::Queryable;
+use mysql::{from_value_opt, Value};
+
 use std::env;
 mod models;
 use models::{RESTInputModel, ResponseData, ResponseItem};
 mod query_engine;
 
 #[post("/api")]
-async fn rest_api(json_query: web::Json<RESTInputModel>) -> Result<String> {
+async fn rest_api(
+    json_query: web::Json<RESTInputModel>,
+    data: web::Data<mysql::Pool>,
+) -> actix_web::Result<impl Responder> {
     let sql_query = query_engine::GetQuery(&json_query);
 
-    Ok(format!("SQL: \n{}!", sql_query))
+    let response_data = web::block(move || get_bank_data(&sql_query, &data)).await??;
+    Ok(web::Json(response_data))
+
+    // Ok(format!("SQL: \n{}!", sql_query))
 }
 
 #[post("/get_query")]
@@ -55,29 +63,45 @@ impl actix_web::ResponseError for PersistenceError {
 pub(crate) async fn sample_query(
     data: web::Data<mysql::Pool>,
 ) -> actix_web::Result<impl Responder> {
-    let bank_response_data = web::block(move || get_bank_data(&data)).await??;
-    Ok(web::Json(bank_response_data))
-}
-
-pub fn get_bank_data(pool: &mysql::Pool) -> Result<ResponseData, PersistenceError> {
-    let mut conn = pool.get_conn()?;
     let mut query = r"
         SELECT category, price FROM products
         "
     .to_string();
 
+    let response_data = web::block(move || get_bank_data(&query, &data)).await??;
+    Ok(web::Json(response_data))
+}
+
+pub fn get_bank_data(query: &String, pool: &mysql::Pool) -> Result<ResponseData, PersistenceError> {
+    let mut conn = pool.get_conn()?;
+
     Ok(ResponseData {
-        data: run_query(&mut query, &mut conn)?,
+        data: run_query(&query, &mut conn)?,
     })
 }
 
+fn row_to_string_list(row: mysql::Row) -> Vec<String> {
+    let mut string_list = Vec::new();
+
+    for (index, column) in row.columns_ref().iter().enumerate() {
+        if let Some(Ok(value)) = row.get_opt(index) {
+            let value_as_string = from_value_opt::<String>(value);
+            string_list.push(value_as_string.unwrap_or_else(|_| "NULL".to_string()));
+        } else {
+            string_list.push("NULL".to_string());
+        }
+    }
+
+    string_list
+}
+
 fn run_query(
-    query: &mut String,
+    query: &String,
     conn: &mut mysql::PooledConn,
 ) -> mysql::error::Result<Vec<ResponseItem>> {
-    conn.query_map(query, |(my_bank_name, my_country)| ResponseItem {
-        bank_name: my_bank_name,
-        country: my_country,
+    conn.query_map(query, |row: mysql::Row| {
+        let test = row_to_string_list(row);
+        ResponseItem { items: test }
     })
 }
 
