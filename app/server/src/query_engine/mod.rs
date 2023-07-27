@@ -168,7 +168,7 @@ pub fn filters_to_sql(filters: &Vec<Filter>) -> String {
 
         if valid_operators.contains(&filter.FilterOperator.as_str()){
             let filter_sql = format!(
-                "{} {} {}", 
+                "{} {} \"{}\"", 
                 dimensions_to_sql(&vec![filter.Dimension.clone()]), 
                 filter.FilterOperator.to_uppercase(),
                 filter.FilterValue
@@ -198,7 +198,7 @@ pub fn filters_to_sql(filters: &Vec<Filter>) -> String {
         //     }
         // }
     }
-    sql_filters.join(", ")
+    sql_filters.join(" and ")
 }
 fn find_relationship<'a>(
     child_table: &str,
