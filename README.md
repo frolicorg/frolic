@@ -1,6 +1,6 @@
 # Build Your Customer Facing Dashboards 10x Faster
 
-Semantic Layer is an open source platform (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the platform and use ready made APIs to query data and create customer facing dashboards.
+Dashboard API Layer is an open source project (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the project and use ready made APIs to query data and create customer facing dashboards.
 
 You no longer have to write custom APIs for different dashboard components and create/maintain SQL queries for them.
 
