@@ -6,6 +6,63 @@ You no longer have to write custom APIs for different dashboard components and c
 
 ![Web App Reference Architecture-5](https://github.com/arihantparsoya/dashboard-api-layer/assets/15258498/156bdb43-23cf-46d5-a212-9c16f2eab01a)
 
+## Use single API to query data for all your dashboard components
+
+You can use a single API endpoint provided by this project to query data for your dashboard. For example: 
+
+```
+curl --location 'http://127.0.0.1:8080/api' \
+--header 'Content-Type: application/json' \
+--data '{
+    "metrics": [
+        {
+        "field": "orders.subtotal",
+        "aggregate_operator": "count"
+        },
+        {
+        "field": "orders.total",
+        "aggregate_operator": "sum"
+        }
+    ],
+    "dimensions": [
+        {
+            "field":"products.category"
+        }
+    ]
+}
+'
+```
+
+The output of the above request will be as follows:
+
+```
+{
+    "data": [
+        [
+            "5061",
+            "446835.9692339897",
+            "Widget"
+        ],
+        [
+            "4784",
+            "404989.686671257",
+            "Gizmo"
+        ],
+        [
+            "4939",
+            "429618.7213845253",
+            "Gadget"
+        ],
+        [
+            "3975",
+            "313761.33664894104",
+            "Doohickey"
+        ]
+    ]
+}
+```
+
+
 ## Running Project
 
 ### 1. Add your MySQL database credentials
