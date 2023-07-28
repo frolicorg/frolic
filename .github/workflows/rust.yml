@@ -1,0 +1,28 @@
+name: Semantic Layer Build
+
+on:
+  push:
+    branches: [ "prod" ]
+    paths:
+      - app/server
+  pull_request:
+    branches: [ "prod" ]
+    paths:
+      - app/server
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      working-directory: app/server
+      run: cargo build --verbose
+    - name: Run tests
+      working-directory: app/server
+      run: cargo test --verbose
