@@ -1,14 +1,10 @@
-name: Rust
+name: Semantic Layer Build
 
 on:
   push:
     branches: [ "prod" ]
-    paths:
-      - 'app/server/**' 
   pull_request:
     branches: [ "prod" ]
-    paths:
-      - 'app/server/**' 
 
 env:
   CARGO_TERM_COLOR: always
