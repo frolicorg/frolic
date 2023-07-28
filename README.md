@@ -9,19 +9,9 @@ Using Docker
 docker-compose up --build
 ```
 
-Run the project using Cargo
-
-```
-cargo watch -x run
-```
-
-```
-cargo install cargo-watch
-```
-
 ## Features
 
-🚀 Fast APIs with Rust
+* 🚀 Fast APIs with Rust
 * Handle complex database joins and relationships
 
 
