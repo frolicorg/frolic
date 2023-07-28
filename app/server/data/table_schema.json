@@ -39,7 +39,14 @@
                 "datatype": "float"
             }
         ],
-        "relationships": []
+        "relationships": [
+            {
+                "users": ["user_id","id"]
+            },
+            {
+                "products": ["product_id","id"]
+            }
+        ]
     },
     {
         "name": "products",
@@ -81,7 +88,14 @@
                 "datatype": "string"
             }
         ],
-        "relationships": []
+        "relationships": [
+            {
+                "orders": ["id","product_id"]
+            },
+            {
+                "reviews": ["id","product_id"]
+            }
+        ]
     },
     {
         "name": "reviews",
@@ -111,7 +125,11 @@
                 "datatype": "string"
             }
         ],
-        "relationships": []
+        "relationships": [
+            {
+                "products": ["product_id","id"]
+            }   
+        ]
     },
     {
         "name": "users",
@@ -169,6 +187,10 @@
                 "datatype": "string"
             }
         ],
-        "relationships": []
+        "relationships": [
+            {
+                "orders": ["id","user_id"]
+            }  
+        ]
     }
 ]

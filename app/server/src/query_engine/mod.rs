@@ -2,34 +2,12 @@ use crate::models;
 use models::{Dimension, Filter, Metric, Table};
 use std::collections::HashMap;
 
-pub fn initiate_tables() -> Vec<Table> {
-    let mut tables = vec![
-        Table::new("users"),
-        Table::new("products"),
-        Table::new("reviews"),
-        Table::new("orders"),
-    ];
-
-    //users and orders
-    tables[3].add_relationship("users", "user_id", "id");
-    tables[3].add_relationship("users", "year", "year");
-    tables[0].add_relationship("orders", "id", "user_id");
-    tables[0].add_relationship("orders", "year", "year");
-    //products and orders
-    tables[3].add_relationship("products", "product_id", "id");
-    tables[1].add_relationship("orders", "id", "product_id");
-
-    //products and reviews
-    tables[2].add_relationship("products", "product_id", "id");
-    tables[1].add_relationship("reviews", "id", "product_id");
-    tables
-}
-
 pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String {
     let tables_json = serde_json::to_string_pretty(&tables).unwrap();
     log::info!("{}", tables_json);
 
-    let tables: Vec<Table> = initiate_tables();
+    // let tables: tables;
+    let tables: Vec<Table> = tables.iter().cloned().collect();
     let metric_fields: Vec<String> = query
         .metrics
         .iter()
