@@ -1,0 +1,174 @@
+[
+    {
+        "name": "orders",
+        "columns": [
+            {
+                "name": "id",
+                "datatype": "int"
+            },
+            {
+                "name": "created_at",
+                "datatype": "datetime"
+            },
+            {
+                "name": "user_id",
+                "datatype": "int"
+            },
+            {
+                "name": "product_id",
+                "datatype": "int"
+            },
+            {
+                "name": "discount",
+                "datatype": "float"
+            },
+            {
+                "name": "quantity",
+                "datatype": "int"
+            },
+            {
+                "name": "subtotal",
+                "datatype": "float"
+            },
+            {
+                "name": "tax",
+                "datatype": "float"
+            },
+            {
+                "name": "total",
+                "datatype": "float"
+            }
+        ],
+        "relationships": []
+    },
+    {
+        "name": "products",
+        "columns": [
+            {
+                "name": "id",
+                "datatype": "int"
+            },
+            {
+                "name": "created_at",
+                "datatype": "datetime"
+            },
+            {
+                "name": "category",
+                "datatype": "string"
+            },
+            {
+                "name": "ean",
+                "datatype": "string"
+            },
+            {
+                "name": "price",
+                "datatype": "float"
+            },
+            {
+                "name": "quantity",
+                "datatype": "int"
+            },
+            {
+                "name": "rating",
+                "datatype": "float"
+            },
+            {
+                "name": "title",
+                "datatype": "string"
+            },
+            {
+                "name": "vendor",
+                "datatype": "string"
+            }
+        ],
+        "relationships": []
+    },
+    {
+        "name": "reviews",
+        "columns": [
+            {
+                "name": "id",
+                "datatype": "int"
+            },
+            {
+                "name": "created_at",
+                "datatype": "datetime"
+            },
+            {
+                "name": "reviewer",
+                "datatype": "string"
+            },
+            {
+                "name": "product_id",
+                "datatype": "bigint"
+            },
+            {
+                "name": "rating",
+                "datatype": "int"
+            },
+            {
+                "name": "body",
+                "datatype": "string"
+            }
+        ],
+        "relationships": []
+    },
+    {
+        "name": "users",
+        "columns": [
+            {
+                "name": "id",
+                "datatype": "int"
+            },
+            {
+                "name": "created_at",
+                "datatype": "string"
+            },
+            {
+                "name": "name",
+                "datatype": "string"
+            },
+            {
+                "name": "email",
+                "datatype": "string"
+            },
+            {
+                "name": "address",
+                "datatype": "string"
+            },
+            {
+                "name": "city",
+                "datatype": "string"
+            },
+            {
+                "name": "state",
+                "datatype": "string"
+            },
+            {
+                "name": "zip",
+                "datatype": "string"
+            },
+            {
+                "name": "birth_date",
+                "datatype": "string"
+            },
+            {
+                "name": "latitude",
+                "datatype": "float"
+            },
+            {
+                "name": "longitude",
+                "datatype": "float"
+            },
+            {
+                "name": "password",
+                "datatype": "string"
+            },
+            {
+                "name": "source",
+                "datatype": "string"
+            }
+        ],
+        "relationships": []
+    }
+]

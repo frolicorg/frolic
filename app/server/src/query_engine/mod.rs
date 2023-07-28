@@ -9,6 +9,7 @@ pub fn initiate_tables() -> Vec<Table> {
         Table::new("reviews"),
         Table::new("orders"),
     ];
+
     //users and orders
     tables[3].add_relationship("users", "user_id", "id");
     tables[3].add_relationship("users", "year", "year");
@@ -27,22 +28,22 @@ pub fn initiate_tables() -> Vec<Table> {
 pub fn GetQuery(query: &models::RESTInputModel) -> String {
     let tables: Vec<Table> = initiate_tables();
     let metric_fields: Vec<String> = query
-        .Metrics
+        .metrics
         .iter()
-        .map(|metric| metric.Field.clone())
+        .map(|metric| metric.field.clone())
         .collect();
     let dimesion_fields: Vec<String> = query
-        .Dimensions
+        .dimensions
         .iter()
-        .map(|metric| metric.Field.clone())
+        .map(|metric| metric.field.clone())
         .collect();
-    let metrics_sql = metrics_to_sql(&query.Metrics);
-    let dimensions_sql = dimensions_to_sql(&query.Dimensions);
+    let metrics_sql = metrics_to_sql(&query.metrics);
+    let dimensions_sql = dimensions_to_sql(&query.dimensions);
     let mut filter_fields = Vec::new();
-    let filters = if let Some(filters) = &query.Filters {
+    let filters = if let Some(filters) = &query.filters {
         filter_fields = filters
             .iter()
-            .map(|filter| filter.Dimension.Field.clone())
+            .map(|filter| filter.dimension.field.clone())
             .collect();
         filters_to_sql(filters)
     } else {
@@ -121,21 +122,21 @@ pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
     let valid_aggregations = ["sum", "avg", "count", "max", "min"];
 
     for metric in metrics {
-        match &metric.AggregateOperator {
+        match &metric.aggregate_operator {
             Some(operator) => {
                 let uppercase_aggregate = operator.to_uppercase();
                 let aggregate_str = operator.as_str();
                 println!("{}", aggregate_str);
 
                 if valid_aggregations.contains(&aggregate_str) {
-                    let column_sql = format!("{}({})", uppercase_aggregate, metric.Field);
+                    let column_sql = format!("{}({})", uppercase_aggregate, metric.field);
                     sql_columns.push(column_sql);
                 } else {
-                    eprintln!("Unknown aggregation function for column '{}'", metric.Field);
+                    eprintln!("Unknown aggregation function for column '{}'", metric.field);
                 }
             }
             None => {
-                let column_sql = format!("({})", metric.Field);
+                let column_sql = format!("({})", metric.field);
                 sql_columns.push(column_sql);
             }
         }
@@ -147,22 +148,22 @@ pub fn dimensions_to_sql(dimensions: &Vec<Dimension>) -> String {
     let mut sql_columns = Vec::new();
     let valid_transformations = ["year", "month"];
     for dimension in dimensions {
-        match &dimension.Transformations {
+        match &dimension.transformations {
             Some(operator) => {
                 let uppercase_transformation = operator.to_uppercase();
                 let transformation_str = operator.as_str();
                 if valid_transformations.contains(&transformation_str) {
-                    let column_sql = format!("{}({})", uppercase_transformation, dimension.Field);
+                    let column_sql = format!("{}({})", uppercase_transformation, dimension.field);
                     sql_columns.push(column_sql);
                 } else {
                     eprintln!(
                         "Unknown aggregation function for column '{}'",
-                        dimension.Field
+                        dimension.field
                     );
                 }
             }
             None => {
-                let column_sql = format!("({})", dimension.Field);
+                let column_sql = format!("({})", dimension.field);
                 sql_columns.push(column_sql);
             }
         }
@@ -174,18 +175,18 @@ pub fn filters_to_sql(filters: &Vec<Filter>) -> String {
     let mut sql_filters = Vec::new();
     let valid_operators = [">", "<", "="];
     for filter in filters {
-        if valid_operators.contains(&filter.FilterOperator.as_str()) {
+        if valid_operators.contains(&filter.filter_operator.as_str()) {
             let filter_sql = format!(
-                "{} {} \"{}\"", 
-                dimensions_to_sql(&vec![filter.Dimension.clone()]), 
-                filter.FilterOperator.to_uppercase(),
-                filter.FilterValue
+                "{} {} \"{}\"",
+                dimensions_to_sql(&vec![filter.dimension.clone()]),
+                filter.filter_operator.to_uppercase(),
+                filter.filter_value
             );
             sql_filters.push(filter_sql)
         } else {
             eprintln!(
                 "Unknown filter operator for column '{}'",
-                filter.Dimension.Field
+                filter.dimension.field
             );
         }
 

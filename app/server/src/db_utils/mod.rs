@@ -4,7 +4,7 @@ use mysql::from_value_opt;
 use mysql::prelude::Queryable;
 
 use crate::models;
-use models::{RESTInputModel, ResponseData, ResponseItem};
+use models::{RESTInputModel, ResponseData};
 
 #[derive(Debug, Display, Error, From)]
 pub enum PersistenceError {
@@ -46,10 +46,10 @@ pub fn execute_query(query: &String, pool: &mysql::Pool) -> Result<ResponseData,
 fn run_query(
     query: &String,
     conn: &mut mysql::PooledConn,
-) -> mysql::error::Result<Vec<ResponseItem>> {
+) -> mysql::error::Result<Vec<Vec<String>>> {
     conn.query_map(query, |row: mysql::Row| {
         let test = sql_row_to_string_list(row);
-        ResponseItem { items: test }
+        test
     })
 }
 
