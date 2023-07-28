@@ -1,6 +1,8 @@
 # Build Your Customer Facing Dashboards 10x Faster
 
-### Running project locally
+Semantic Layer is an open source platform to build customer facing dashboards 10x faster. You can directly connect your database to the platform and use our ready made APIs to create customer facing dashboards.
+
+## Running project locally
 
 Using Docker
 ```
@@ -16,3 +18,15 @@ cargo watch -x run
 ```
 cargo install cargo-watch
 ```
+
+## Support and Community
+
+Issues are inevitable. When you have one, our entire team and our active developer community is around to help.
+
+💬 Ask for help on [Discord](https://discord.gg/NA9nkZaQnv)
+⚠️ Open an issue right here on [GitHub](https://github.com/arihantparsoya/dashboard-semantic-layer/issues/new/choose)
+
+## License
+
+Appsmith is available under the [Apache License 2.0](https://github.com/arihantparsoya/dashboard-semantic-layer/blob/prod/LICENSE)
+
