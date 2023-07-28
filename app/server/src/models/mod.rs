@@ -27,19 +27,29 @@ pub struct Filter {
     pub FilterValue: String,
 }
 
-#[derive(Debug, Serialize)]
-pub struct ResponseItem {
-    pub items: Vec<String>,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ResponseData {
+    pub data: Vec<Vec<String>>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct ResponseData {
-    pub data: Vec<ResponseItem>,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum DataType {
+    Integer,
+    Text,
+    Float,
+    // Add more data types as needed
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Column {
+    name: String,
+    data_type: DataType,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Table {
     pub name: String,
+    pub columns: Vec<Column>,
     pub relationships: Vec<HashMap<String, (String, String)>>, // Child table -> (Parent column, Child column)
 }
 
@@ -47,6 +57,7 @@ impl Table {
     pub fn new(name: &str) -> Self {
         Table {
             name: name.to_string(),
+            columns: Vec::new(),
             relationships: Vec::new(),
         }
     }

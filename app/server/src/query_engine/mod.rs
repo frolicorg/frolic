@@ -9,6 +9,7 @@ pub fn initiate_tables() -> Vec<Table> {
         Table::new("reviews"),
         Table::new("orders"),
     ];
+
     //users and orders
     tables[3].add_relationship("users", "user_id", "id");
     tables[0].add_relationship("orders", "id", "user_id");
