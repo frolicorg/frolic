@@ -29,7 +29,7 @@ async fn get_query(
     app_state: web::Data<AppState>,
 ) -> Result<String> {
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
-    Ok(format!("SQL: \n{}!", sql_query))
+    Ok(format!("SQL:\n{}!", sql_query))
 }
 
 #[get("/sample_query")]
@@ -139,7 +139,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_query)
             .service(rest_api)
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
 }

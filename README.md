@@ -16,3 +16,8 @@ cargo watch -x run
 ```
 rust default nightly
 ```
+
+
+```
+docker-compose up --build
+```
