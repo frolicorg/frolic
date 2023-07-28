@@ -1,6 +1,6 @@
 # Build Your Customer Facing Dashboards 10x Faster
 
-Semantic Layer is an open source platform to build customer facing dashboards 10x faster. You can directly connect your database to the platform and use our ready made APIs to create customer facing dashboards.
+Semantic Layer is an open source platform to build customer facing dashboards 10x faster. You can directly connect your database to the platform and use ready made APIs to create customer facing dashboards.
 
 ## Running project locally
 
