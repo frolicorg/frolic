@@ -12,8 +12,9 @@ docker-compose up --build
 ## Features
 
 * 🚀 Fast APIs with Rust
-* Handle complex database joins and relationships
-
+* Single API for all your dashboard requirements
+* Automatically generates and execute SQL queries on your database
+* Automatically handles complex table relationships
 
 ## Support and Community
 
