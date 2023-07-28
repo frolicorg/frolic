@@ -14,6 +14,8 @@ Use docker to run the database
 docker-compose up --build
 ```
 
+You can start using the docker container path to query your data.
+
 ## Features
 
 * 🚀 Fast APIs with Rust
