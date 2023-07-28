@@ -4,7 +4,7 @@ use mysql::from_value_opt;
 use mysql::prelude::Queryable;
 
 use crate::models;
-use models::{RESTInputModel, ResponseData, ResponseItem};
+use models::{RESTInputModel, ResponseData};
 
 #[derive(Debug, Display, Error, From)]
 pub enum PersistenceError {
