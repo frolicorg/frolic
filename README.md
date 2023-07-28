@@ -1,4 +1,4 @@
-# dashboard-semantic-layer
+# Semantic Layer for Your Dashboard
 
 Setup
 ```
