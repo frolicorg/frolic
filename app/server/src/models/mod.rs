@@ -3,28 +3,28 @@ use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RESTInputModel {
-    pub Metrics: Vec<Metric>,
-    pub Dimensions: Vec<Dimension>,
-    pub Filters: Option<Vec<Filter>>,
+    pub metrics: Vec<Metric>,
+    pub dimensions: Vec<Dimension>,
+    pub filters: Option<Vec<Filter>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Metric {
-    pub Field: String,
-    pub AggregateOperator: Option<String>,
+    pub field: String,
+    pub aggregate_operator: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Dimension {
-    pub Field: String,
-    pub Transformations: Option<String>,
+    pub field: String,
+    pub transformations: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Filter {
-    pub Dimension: Dimension,
-    pub FilterOperator: String,
-    pub FilterValue: String,
+    pub dimension: Dimension,
+    pub filter_operator: String,
+    pub filter_value: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -51,6 +51,11 @@ pub struct Table {
     pub name: String,
     pub columns: Vec<Column>,
     pub relationships: Vec<HashMap<String, (String, String)>>, // Child table -> (Parent column, Child column)
+}
+
+pub struct AppState {
+    pub app_name: String,
+    // pub tables: Vec<Table>,
 }
 
 impl Table {

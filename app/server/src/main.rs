@@ -1,7 +1,7 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
 use env_logger;
 use log;
-use models::{RESTInputModel, ResponseData};
+use models::{AppState, RESTInputModel, ResponseData};
 use mysql::prelude::Queryable;
 use std::env;
 mod db_utils;
@@ -45,10 +45,6 @@ async fn hello() -> impl Responder {
 #[post("/echo")]
 async fn echo(req_body: String) -> impl Responder {
     HttpResponse::Ok().body(req_body)
-}
-
-struct AppState {
-    app_name: String,
 }
 
 fn get_conn_builder(
