@@ -8,7 +8,9 @@ You no longer have to write custom APIs for different dashboard components and c
 
 ## Use single API to query data for all your dashboard components
 
-You can use a single API endpoint provided by this project to query data for your dashboard. For example: 
+You can use a single API endpoint provided by this project to query data for your dashboard. 
+
+For example: 
 
 ```
 curl --location 'http://127.0.0.1:8080/api' \
@@ -16,12 +18,12 @@ curl --location 'http://127.0.0.1:8080/api' \
 --data '{
     "metrics": [
         {
-        "field": "orders.subtotal",
-        "aggregate_operator": "count"
+            "field": "orders.subtotal",
+            "aggregate_operator": "count"
         },
         {
-        "field": "orders.total",
-        "aggregate_operator": "sum"
+            "field": "orders.total",
+            "aggregate_operator": "sum"
         }
     ],
     "dimensions": [
@@ -32,6 +34,12 @@ curl --location 'http://127.0.0.1:8080/api' \
 }
 '
 ```
+
+You can pass the metrics you require in the `metrics` field as an array. The `field` of the metric is written in `<table_name>.<column_name>` format. The `aggregate_operator` can be used to specifiy what operation you want to apply on the specified `<table_name>.<column_name>`. 
+
+The `dimensions` field allows you to categorize the metrics returned by the API. To specify the column by which you want to categorize the `metrics`, use the `field` operator and specify the column name in `<table_name>.<column_name>` format.
+
+The data returned by the API will be a list of array. The array will contain the metric values and the dimension by which they are categorized.
 
 The output of the above request will be as follows:
 
@@ -61,7 +69,6 @@ The output of the above request will be as follows:
     ]
 }
 ```
-
 
 ## Running Project
 
