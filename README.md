@@ -4,7 +4,12 @@ Semantic Layer is an open source platform (written in Rust) to build customer fa
 
 ## Running project locally
 
-Using Docker
+### 1. Add your MySQL database credentials
+Enter your MySQL database credentials in the [.env](https://github.com/arihantparsoya/dashboard-api-layer/blob/prod/app/server/.env) file.
+
+### 2. Run the Project
+
+Use docker to run the database
 ```
 docker-compose up --build
 ```
@@ -15,6 +20,10 @@ docker-compose up --build
 * Single API for all your dashboard requirements
 * Automatically generates and execute SQL queries on your database
 * Automatically handles complex table relationships
+
+## Integrations
+
+We currently support MySQL database. We will add integrations with other databases in the future.
 
 ## Support and Community
 
