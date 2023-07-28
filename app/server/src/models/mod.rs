@@ -34,16 +34,17 @@ pub struct ResponseData {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum DataType {
-    Integer,
-    Text,
-    Float,
-    // Add more data types as needed
+    string,
+    int,
+    bigint,
+    float,
+    datetime, // Add more data types as needed
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Column {
     name: String,
-    data_type: DataType,
+    datatype: DataType,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -55,7 +56,7 @@ pub struct Table {
 
 pub struct AppState {
     pub app_name: String,
-    // pub tables: Vec<Table>,
+    pub tables: Vec<Table>,
 }
 
 impl Table {

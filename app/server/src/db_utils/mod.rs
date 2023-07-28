@@ -35,8 +35,11 @@ impl actix_web::ResponseError for PersistenceError {
     }
 }
 
-pub fn execute_query(query: &String, pool: &mysql::Pool) -> Result<ResponseData, PersistenceError> {
-    let mut conn = pool.get_conn()?;
+pub fn execute_query(
+    query: &String,
+    sql_connection_pool: &mysql::Pool,
+) -> Result<ResponseData, PersistenceError> {
+    let mut conn = sql_connection_pool.get_conn()?;
 
     Ok(ResponseData {
         data: run_query(&query, &mut conn)?,

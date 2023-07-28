@@ -1,26 +1,34 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
 use env_logger;
 use log;
-use models::{AppState, RESTInputModel, ResponseData};
+use models::{AppState, RESTInputModel, ResponseData, Table};
 use mysql::prelude::Queryable;
 use std::env;
 mod db_utils;
 mod models;
 mod query_engine;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 
 #[post("/api")]
 async fn rest_api(
     json_query: web::Json<RESTInputModel>,
-    data: web::Data<mysql::Pool>,
+    sql_connection_pool: web::Data<mysql::Pool>,
+    app_state: web::Data<AppState>,
 ) -> actix_web::Result<impl Responder> {
-    let sql_query = query_engine::GetQuery(&json_query);
-    let response_data = web::block(move || db_utils::execute_query(&sql_query, &data)).await??;
+    let sql_query = query_engine::get_query(&json_query, &app_state.tables);
+    let response_data =
+        web::block(move || db_utils::execute_query(&sql_query, &sql_connection_pool)).await??;
     Ok(web::Json(response_data))
 }
 
 #[post("/get_query")]
-async fn get_query(json_query: web::Json<RESTInputModel>) -> Result<String> {
-    let sql_query = query_engine::GetQuery(&json_query);
+async fn get_query(
+    json_query: web::Json<RESTInputModel>,
+    app_state: web::Data<AppState>,
+) -> Result<String> {
+    let sql_query = query_engine::get_query(&json_query, &app_state.tables);
     Ok(format!("SQL: \n{}!", sql_query))
 }
 
@@ -36,6 +44,13 @@ pub(crate) async fn sample_query(
     let response_data = web::block(move || db_utils::execute_query(&query, &data)).await??;
     Ok(web::Json(response_data))
 }
+
+// #[get("/test")]
+// pub(crate) async fn test(data: web::Data<AppState>) -> actix_web::Result<impl Responder> {
+//     let tables_json = serde_json::to_string_pretty(&data.tables).unwrap();
+//     log::info!("{}", tables_json);
+//     Ok(web::Json({}))
+// }
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -62,6 +77,18 @@ fn get_conn_builder(
         .pass(Some(db_password))
 }
 
+fn read_tables_from_file(file_path: &str) -> Result<Vec<Table>, Box<dyn std::error::Error>> {
+    // Read the contents of the file
+    let mut file = File::open(file_path)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    // Deserialize the JSON data into a vector of Table structs
+    let tables: Vec<Table> = serde_json::from_str(&contents)?;
+
+    Ok(tables)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // initialize environment
@@ -83,17 +110,31 @@ async fn main() -> std::io::Result<()> {
 
     log::info!("initializing database connection");
     let pool = mysql::Pool::new(builder).unwrap();
+    let sql_shared_data = web::Data::new(pool);
 
-    let shared_data = web::Data::new(pool);
+    log::info!("importing table schema");
+    let schema_file_path = "data/table_schema.json";
+    let tables = match read_tables_from_file(&schema_file_path) {
+        Ok(tables) => tables,
+        Err(err) => {
+            log::error!("{}", err);
+            vec![]
+        }
+    };
+
+    // let tables_json = serde_json::to_string_pretty(&tables).unwrap();
+    // log::info!("{}", tables_json);
 
     HttpServer::new(move || {
         App::new()
-            .app_data(shared_data.clone())
+            .app_data(sql_shared_data.clone())
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Actix Web"),
+                tables: tables.clone(),
             }))
             .service(hello)
             .service(echo)
+            // .service(test)
             .service(sample_query)
             .service(get_query)
             .service(rest_api)

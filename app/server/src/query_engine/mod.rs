@@ -24,7 +24,10 @@ pub fn initiate_tables() -> Vec<Table> {
     tables
 }
 
-pub fn GetQuery(query: &models::RESTInputModel) -> String {
+pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String {
+    let tables_json = serde_json::to_string_pretty(&tables).unwrap();
+    log::info!("{}", tables_json);
+
     let tables: Vec<Table> = initiate_tables();
     let metric_fields: Vec<String> = query
         .metrics
