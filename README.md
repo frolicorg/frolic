@@ -1,23 +1,18 @@
-# Semantic Layer for Your Dashboard
+# Build Your Customer Facing Dashboards 10x Faster
 
-Setup
+### Running project locally
+
+Using Docker
 ```
-cargo install cargo-watch
+docker-compose up --build
 ```
 
-Run the Project
-```
-cargo run
+Run the project using Cargo
 
-// automatically reload the project when there are any changes
+```
 cargo watch -x run
 ```
 
 ```
-rust default nightly
-```
-
-
-```
-docker-compose up --build
+cargo install cargo-watch
 ```
