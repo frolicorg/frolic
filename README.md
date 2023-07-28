@@ -24,6 +24,7 @@ cargo install cargo-watch
 Issues are inevitable. When you have one, our entire team and our active developer community is around to help.
 
 💬 Ask for help on [Discord](https://discord.gg/NA9nkZaQnv)
+
 ⚠️ Open an issue right here on [GitHub](https://github.com/arihantparsoya/dashboard-semantic-layer/issues/new/choose)
 
 ## License
