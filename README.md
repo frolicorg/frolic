@@ -12,7 +12,7 @@ You can use a single API endpoint provided by this project to query data for you
 
 For example: 
 
-```
+```curl
 curl --location 'http://127.0.0.1:8080/api' \
 --header 'Content-Type: application/json' \
 --data '{
@@ -43,7 +43,7 @@ The data returned by the API will be a list of array. The array will contain the
 
 The output of the above request will be as follows:
 
-```
+```json
 {
     "data": [
         [
