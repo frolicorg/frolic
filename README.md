@@ -2,7 +2,7 @@
 
 Semantic Layer is an open source platform (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the platform and use ready made APIs to query data and create customer facing dashboards.
 
-You no longer have to write custom APIs for different dashboard components and write/maintain SQL queries for every API.
+You no longer have to write custom APIs for different dashboard components and create/maintain SQL queries for them.
 
 ![Web App Reference Architecture-5](https://github.com/arihantparsoya/dashboard-api-layer/assets/15258498/156bdb43-23cf-46d5-a212-9c16f2eab01a)
 
