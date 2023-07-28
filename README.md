@@ -45,5 +45,5 @@ Lets build great software together.
 
 ## License
 
-Appsmith is available under the [Apache License 2.0](https://github.com/arihantparsoya/dashboard-semantic-layer/blob/prod/LICENSE)
+This project is available under the [Apache License 2.0](https://github.com/arihantparsoya/dashboard-semantic-layer/blob/prod/LICENSE)
 
