@@ -11,8 +11,9 @@ pub fn initiate_tables() -> Vec<Table> {
     ];
     //users and orders
     tables[3].add_relationship("users", "user_id", "id");
+    tables[3].add_relationship("users", "year", "year");
     tables[0].add_relationship("orders", "id", "user_id");
-
+    tables[0].add_relationship("orders", "year", "year");
     //products and orders
     tables[3].add_relationship("products", "product_id", "id");
     tables[1].add_relationship("orders", "id", "product_id");
@@ -58,19 +59,10 @@ pub fn GetQuery(query: &models::RESTInputModel) -> String {
     let table_sql = handle_required_table(tables, required_table_names);
 
     //generate final mysql query
-    let mut query = String::new();
-    if !filters.is_empty() {
-        query = format!(
-            "select {}, {} from {} where {} group by {} ;",
-            metrics_sql, dimensions_sql, table_sql, filters, dimensions_sql
-        );
-    } else {
-        query = format!(
-            "select {}, {} from {} group by {} ;",
-            metrics_sql, dimensions_sql, table_sql, dimensions_sql
-        );
-    }
-    query
+    format!(
+        "select {}, {} from {} {} group by {} ;",
+        metrics_sql, dimensions_sql, table_sql, filters, dimensions_sql
+    )
 }
 
 //this function takes required tables and registered tables and provide the joined table
@@ -181,7 +173,6 @@ pub fn dimensions_to_sql(dimensions: &Vec<Dimension>) -> String {
 pub fn filters_to_sql(filters: &Vec<Filter>) -> String {
     let mut sql_filters = Vec::new();
     let valid_operators = [">", "<", "="];
-
     for filter in filters {
         if valid_operators.contains(&filter.FilterOperator.as_str()) {
             let filter_sql = format!(
@@ -217,7 +208,7 @@ pub fn filters_to_sql(filters: &Vec<Filter>) -> String {
         //     }
         // }
     }
-    sql_filters.join(" and ")
+    format!("where {}",sql_filters.join(" and "))
 }
 
 fn find_relationship<'a>(
@@ -257,7 +248,7 @@ fn generate_join_query(tables: &[Table]) -> Option<String> {
 
                 query += &format!(" JOIN {} ON {}", table.name, join_condition);
                 join_found = true;
-                break;
+                // break;
             }
         }
 
