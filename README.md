@@ -13,7 +13,7 @@ You can use a single API endpoint provided by this project to query data for you
 For example: 
 
 ```curl
-curl --location 'http://127.0.0.1:8080/api' \
+curl --location 'http://localhost/api' \
 --header 'Content-Type: application/json' \
 --data '{
     "metrics": [
