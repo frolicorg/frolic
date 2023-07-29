@@ -32,20 +32,20 @@ pub struct ResponseData {
     pub data: Vec<Vec<String>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum DataType {
-    string,
-    varchar,
-    int,
-    bigint,
-    float,
-    datetime, // Add more data types as needed
-}
+// #[derive(Debug, Deserialize, Serialize, Clone)]
+// pub enum DataType {
+//     string,
+//     varchar,
+//     int,
+//     bigint,
+//     float,
+//     datetime, // Add more data types as needed
+// }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Column {
-    name: String,
-    datatype: DataType,
+    pub name: String,
+    pub datatype: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
