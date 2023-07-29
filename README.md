@@ -1,4 +1,4 @@
-# Build Your Customer Facing Dashboards 10x Faster
+# Frolic
 
 Frolic is an open source project (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the project and use ready made APIs to query data and create customer facing dashboards.
 
