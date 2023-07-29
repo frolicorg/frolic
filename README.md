@@ -86,7 +86,7 @@ You can start using the docker container path to query your data.
 
 ## Features
 
-* 🚀 Fast APIs with Rust
+* 🚀 Fast and Scalable APIs with Rust
 * Single API for all your dashboard requirements
 * Automatically generates and execute SQL queries on your database
 * Automatically handles complex table relationships
