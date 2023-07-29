@@ -1,0 +1,170 @@
+[
+  {
+    "name": "orders",
+    "columns": [
+      {
+        "name": "id",
+        "datatype": "int"
+      },
+      {
+        "name": "created_at",
+        "datatype": "datetime"
+      },
+      {
+        "name": "user_id",
+        "datatype": "bigint"
+      },
+      {
+        "name": "product_id",
+        "datatype": "bigint"
+      },
+      {
+        "name": "discount",
+        "datatype": "float"
+      },
+      {
+        "name": "quantity",
+        "datatype": "int"
+      },
+      {
+        "name": "subtotal",
+        "datatype": "float"
+      },
+      {
+        "name": "tax",
+        "datatype": "float"
+      },
+      {
+        "name": "total",
+        "datatype": "float"
+      }
+    ]
+  },
+  {
+    "name": "products",
+    "columns": [
+      {
+        "name": "id",
+        "datatype": "int"
+      },
+      {
+        "name": "created_at",
+        "datatype": "datetime"
+      },
+      {
+        "name": "category",
+        "datatype": "varchar"
+      },
+      {
+        "name": "ean",
+        "datatype": "varchar"
+      },
+      {
+        "name": "price",
+        "datatype": "float"
+      },
+      {
+        "name": "quantity",
+        "datatype": "int"
+      },
+      {
+        "name": "rating",
+        "datatype": "float"
+      },
+      {
+        "name": "title",
+        "datatype": "varchar"
+      },
+      {
+        "name": "vendor",
+        "datatype": "varchar"
+      }
+    ]
+  },
+  {
+    "name": "reviews",
+    "columns": [
+      {
+        "name": "id",
+        "datatype": "int"
+      },
+      {
+        "name": "created_at",
+        "datatype": "datetime"
+      },
+      {
+        "name": "reviewer",
+        "datatype": "varchar"
+      },
+      {
+        "name": "product_id",
+        "datatype": "bigint"
+      },
+      {
+        "name": "rating",
+        "datatype": "int"
+      },
+      {
+        "name": "body",
+        "datatype": "varchar"
+      }
+    ]
+  },
+  {
+    "name": "users",
+    "columns": [
+      {
+        "name": "id",
+        "datatype": "int"
+      },
+      {
+        "name": "created_at",
+        "datatype": "varchar"
+      },
+      {
+        "name": "name",
+        "datatype": "varchar"
+      },
+      {
+        "name": "email",
+        "datatype": "varchar"
+      },
+      {
+        "name": "address",
+        "datatype": "varchar"
+      },
+      {
+        "name": "city",
+        "datatype": "varchar"
+      },
+      {
+        "name": "state",
+        "datatype": "varchar"
+      },
+      {
+        "name": "zip",
+        "datatype": "varchar"
+      },
+      {
+        "name": "birth_date",
+        "datatype": "varchar"
+      },
+      {
+        "name": "latitude",
+        "datatype": "float"
+      },
+      {
+        "name": "longitude",
+        "datatype": "float"
+      },
+      {
+        "name": "password",
+        "datatype": "varchar"
+      },
+      {
+        "name": "source",
+        "datatype": "varchar"
+      }
+    ]
+  }
+]

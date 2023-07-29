@@ -5,6 +5,7 @@ use models::{AppState, RESTInputModel, ResponseData, Table};
 use mysql::prelude::Queryable;
 use std::env;
 mod db_utils;
+// use db_utils::{fetch_all_tables,fetch_columns_for_table,create_table_schema,TableInfo};
 mod models;
 mod query_engine;
 use std::collections::HashMap;
@@ -113,6 +114,11 @@ async fn main() -> std::io::Result<()> {
     let sql_shared_data = web::Data::new(pool);
 
     log::info!("importing table schema");
+    //import directly from connection
+    // let tables = db_utils::fetch_all_tables(&pool);
+    // create_table_schema(&pool);
+    //update the schema from database as per required changes and create the json table_schema.json
+
     let schema_file_path = "data/table_schema.json";
     let tables = match read_tables_from_file(&schema_file_path) {
         Ok(tables) => tables,

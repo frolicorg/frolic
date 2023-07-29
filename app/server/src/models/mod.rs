@@ -35,6 +35,7 @@ pub struct ResponseData {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum DataType {
     string,
+    varchar,
     int,
     bigint,
     float,
