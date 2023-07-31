@@ -1,8 +1,25 @@
-# Frolic
+
+<p align="center">
+<a href="">
+  <img src="static/Frolic Icon.png" alt="Appsmith Logo" width="350">
+</a>
+</p>
 
 Frolic is an open source project (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the project and use ready made APIs to query data and create customer facing dashboards.
 
 You no longer have to write custom APIs for different dashboard components and create/maintain SQL queries for them.
+
+![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/tooljet/tooljet-ce)
+![GitHub contributors](https://img.shields.io/github/contributors/FrolicOrg/Frolic)
+[![GitHub issues](https://img.shields.io/github/issues/FrolicOrg/Frolic)](https://github.com/FrolicOrg/Frolic/issues)
+[![GitHub stars](https://img.shields.io/github/stars/FrolicOrg/Frolic)](https://github.com/FrolicOrg/Frolic/stargazers)
+![GitHub closed issues](https://img.shields.io/github/issues-closed/FrolicOrg/Frolic)
+![GitHub pull requests](https://img.shields.io/github/issues-pr-raw/FrolicOrg/Frolic)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/FrolicOrg/Frolic)
+[![GitHub license](https://img.shields.io/github/license/FrolicOrg/Frolic)](https://github.com/FrolicOrg/Frolic)
+[![Twitter Follow](https://img.shields.io/twitter/follow/FrolicOrg?style=social)](https://twitter.com/FrolicOrg)
+<!-- ![GitHub release (latest by date)](https://img.shields.io/github/v/release/FrolicOrg/Frolic) -->
+
 
 ![Web App Reference Architecture-5](https://github.com/arihantparsoya/dashboard-api-layer/assets/15258498/156bdb43-23cf-46d5-a212-9c16f2eab01a)
 
