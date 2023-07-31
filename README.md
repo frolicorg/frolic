@@ -1,4 +1,8 @@
-# Frolic
+![Frolic Name](https://github.com/FrolicOrg/Frolic/assets/15258498/acb57a86-8d90-4b76-917c-8d6ae5c3ac99)
+
+<a href="https://www.appsmith.com?utm_source=github&utm_medium=organic&utm_campaign=readme">
+  <img src="static/appsmith_logo_white.png" alt="Appsmith Logo" width="350">
+</a>
 
 Frolic is an open source project (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the project and use ready made APIs to query data and create customer facing dashboards.
 
