@@ -5,7 +5,7 @@ use models::{AppState, RESTInputModel, ResponseData, Table};
 use mysql::prelude::Queryable;
 use std::env;
 mod db_utils;
-use db_utils::{fetch_all_tables,fetch_columns_for_table,create_table_schema,update_relationship};
+use db_utils::{fetch_all_tables,fetch_columns_for_table,create_table_schema,add_table_relationship};
 mod models;
 mod query_engine;
 use std::collections::HashMap;
@@ -116,27 +116,13 @@ async fn main() -> std::io::Result<()> {
     log::info!("importing table schema");
     //import directly from connection
     // let tables = db_utils::fetch_all_tables(&pool);
-    create_table_schema(&pool);
+    let output_file_path = "data/table_schema_db.json";
+    create_table_schema(&pool,output_file_path);
     
-    //update the schema from database as per required changes and create the json table_schema.json
-    let relationships = [
-        ("data/table_schema_db.json", "orders", "users", "user_id", "id"),
-        ("data/table_schema_db.json", "users", "orders", "id", "user_id"),
-        ("data/table_schema_db.json", "orders", "products", "product_id", "id"),
-        ("data/table_schema_db.json", "products", "orders", "id", "product_id"),
-        ("data/table_schema_db.json", "products", "reviews", "id", "product_id"),
-        ("data/table_schema_db.json", "reviews", "products", "product_id", "id"),
-        // Add more tuples with different function arguments as needed
-    ];
-    // Call the function for each set of arguments in the array
-    for (data, table1, table2, field1, field2) in relationships.iter() {
-        match update_relationship(data, table1, table2, field1, field2) {
-            Ok(_) => println!("Relationship updated successfully!"),
-            Err(e) => eprintln!("Error: {}", e),
-        }
-    }
-    let schema_file_path = "data/table_schema_db.json";
-    let tables = match read_tables_from_file(&schema_file_path) {
+    let input_file_path = "data/relationships.json";
+    add_table_relationship(input_file_path,output_file_path);
+    // let schema_file_path = "data/table_schema_db.json";
+    let tables = match read_tables_from_file(&output_file_path) {
         Ok(tables) => tables,
         Err(err) => {
             log::error!("{}", err);

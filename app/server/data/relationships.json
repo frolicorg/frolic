@@ -1,0 +1,38 @@
+[
+    {
+        "parent_table": "orders",
+        "child_table": "users",
+        "parent_column": "user_id",
+        "child_column": "id"
+    },
+    {
+        "parent_table": "users",
+        "child_table": "orders",
+        "parent_column": "id",
+        "child_column": "user_id"
+    },
+    {
+        "parent_table": "orders",
+        "child_table": "products",
+        "parent_column": "product_id",
+        "child_column": "id"
+    },
+    {
+        "parent_table": "products",
+        "child_table": "orders",
+        "parent_column": "id",
+        "child_column": "product_id"
+    },
+    {
+        "parent_table": "products",
+        "child_table": "reviews",
+        "parent_column": "id",
+        "child_column": "product_id"
+    },
+    {
+        "parent_table": "reviews",
+        "child_table": "products",
+        "parent_column": "product_id",
+        "child_column": "id"
+    }
+]

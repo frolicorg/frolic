@@ -5,6 +5,8 @@ use mysql::prelude::Queryable;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::fs;
+use std::fs::File;
+use std::io::Read;
 use crate::models;
 use models::{RESTInputModel, ResponseData,Table,Column};
 
@@ -21,6 +23,15 @@ pub enum PersistenceError {
     EmptyCustomerName,
     MysqlError(mysql::Error),
     Unknown,
+}
+
+
+#[derive(Debug, Serialize, Deserialize,Clone)]
+pub struct Relationship {
+    pub parent_table: String,
+    pub child_table: String,
+    pub parent_column: String,
+    pub child_column: String,
 }
 
 impl actix_web::ResponseError for PersistenceError {
@@ -114,26 +125,23 @@ pub fn fetch_columns_for_table(pool: &Pool, table_name: &str) -> Result<Vec<Colu
 
 pub fn update_relationship(
     file_path: &str,
-    table_name: &str,
-    child_table: &str,
-    parent_column: &str,
-    child_column: &str,
+    relationship: Relationship,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Read the JSON file
+    
     let json_str = fs::read_to_string(file_path)?;
 
-    // Deserialize the JSON into a vector of Table structs
+    // Deserialize the JSON into a vector of Relationship structs
     let mut tables: Vec<Table> = serde_json::from_str(&json_str)?;
+    // let mut relationships: Vec<Relationship> = serde_json::from_str(&json_str)?;
 
-    // Find the table to update
-    if let Some(table) = tables.iter_mut().find(|t| t.name == table_name) {
+    if let Some(table) = tables.iter_mut().find(|t| t.name == relationship.parent_table) {
         // Create a new relationship entry
-        let new_relationship = HashMap::from([(child_table.to_string(), (parent_column.to_string(), child_column.to_string()))]);
+        let new_relationship = HashMap::from([(relationship.child_table.to_string(), (relationship.parent_column.to_string(), relationship.child_column.to_string()))]);
 
         // Insert the new relationship into the table's relationships
         table.relationships.push(new_relationship);
-    } else {
-        return Err(format!("Table '{}' not found.", table_name).into());
+    // Find the relationship to update
     }
 
     // Serialize the modified vector back to JSON
@@ -145,7 +153,29 @@ pub fn update_relationship(
     Ok(())
 }
 
-pub fn create_table_schema(pool: &Pool) -> () {
+pub fn add_table_relationship(input_file_path: &str,output_file_path: &str) -> () {
+
+    // Read the JSON file into a string
+    let mut json_str = String::new();
+    File::open(&input_file_path)
+        .and_then(|mut file| file.read_to_string(&mut json_str))
+        .expect("Error reading JSON file");
+
+    // Deserialize the JSON string into relationships vector
+    let relationships: Vec<Relationship> = serde_json::from_str(&json_str)
+        .expect("Error parsing JSON");
+    
+    for relationship in &relationships {
+        let cloned_relationship = relationship.clone();
+        if let Err(err) = update_relationship(&output_file_path, cloned_relationship) {
+            eprintln!("Error: {:?}", err);
+        } else {
+            println!("Relationship updated/added successfully!");
+        }
+    }
+}
+
+pub fn create_table_schema(pool: &Pool,output_file_path: &str) -> () {
     match fetch_all_tables(&pool) {
         Ok(tables) => {
             let mut table_info_list: Vec<Table> = Vec::new();
@@ -169,7 +199,7 @@ pub fn create_table_schema(pool: &Pool) -> () {
                 .expect("Error converting to JSON");
 
             // Write the JSON string to a file
-            std::fs::write("data/table_schema_db.json", json_string)
+            std::fs::write(output_file_path, json_string)
                 .expect("Error writing to file");
         }
         Err(err) => eprintln!("Error fetching tables: {:?}", err),
