@@ -49,7 +49,8 @@ pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String 
 
     //get the sql for each part separately
     let metrics_sql = metrics_to_sql(&query.metrics);
-    let dimensions_sql = dimensions_to_sql(&query.dimensions);
+    let dimensions_sql = dimensions_to_sql(&query.dimensions,false);
+    let dimensions_group_sql = dimensions_to_sql(&query.dimensions,true);
     let filters_sql = if let Some(filters) = &query.filters {
         filters_to_sql(filters,&field_datatype_map)
     } else {
@@ -64,7 +65,7 @@ pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String 
     //generate final mysql query
     format!(
         "select {}, {} from {} {} group by {} ;",
-        metrics_sql, dimensions_sql, table_sql, filters_sql, dimensions_sql
+        dimensions_sql, metrics_sql, table_sql, filters_sql, dimensions_group_sql
     )
 }
 
@@ -130,7 +131,15 @@ pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
                 println!("{}", aggregate_str);
 
                 if valid_aggregations.contains(&aggregate_str) {
-                    let column_sql = format!("{}({})", uppercase_aggregate, metric.field);
+                    let column_sql = match &metric.name{
+                        Some(nm)=>{
+                            format!("{}({}) as {}", uppercase_aggregate,&metric.field, nm)
+                        }
+                        None =>{
+                            format!("{}({})", uppercase_aggregate, &metric.field)
+                        }
+                    };
+
                     sql_columns.push(column_sql);
                 } else {
                     eprintln!("Unknown aggregation function for column '{}'", metric.field);
@@ -145,7 +154,7 @@ pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
     sql_columns.join(", ")
 }
 
-pub fn dimensions_to_sql(dimensions: &Vec<Dimension>) -> String {
+pub fn dimensions_to_sql(dimensions: &Vec<Dimension>,group:bool) -> String {
     let mut sql_columns = Vec::new();
     let valid_transformations = ["year", "month"];
     for dimension in dimensions {
@@ -154,7 +163,20 @@ pub fn dimensions_to_sql(dimensions: &Vec<Dimension>) -> String {
                 let uppercase_transformation = operator.to_uppercase();
                 let transformation_str = operator.as_str();
                 if valid_transformations.contains(&transformation_str) {
-                    let column_sql = format!("{}({})", uppercase_transformation, dimension.field);
+
+                    let column_sql = match &dimension.name{
+                        Some(nm)=>{
+                            if group{
+                                format!("{}({})", uppercase_transformation,&dimension.field)
+                            }
+                            else{
+                                format!("{}({}) as {}", uppercase_transformation,&dimension.field, nm)
+                            }
+                        }
+                        None =>{
+                            format!("{}({})", uppercase_transformation, &dimension.field)
+                        }
+                    };
                     sql_columns.push(column_sql);
                 } else {
                     eprintln!(
@@ -193,13 +215,13 @@ pub fn filters_to_sql(filters: &Vec<Filter>,field_datatype_map: &HashMap<&String
             let filter_sql = match datatype_field.as_str(){
                 "varchar" | "datetime" => format!(
                     "{} {} \"{}\"",
-                    dimensions_to_sql(&vec![filter.dimension.clone()]),
+                    dimensions_to_sql(&vec![filter.dimension.clone()],true),
                     filter.filter_operator.to_uppercase(),
                     filter.filter_value
                 ),
                 "int" | "bigint" | "float" => format!(
                     "{} {} {}",
-                    dimensions_to_sql(&vec![filter.dimension.clone()]),
+                    dimensions_to_sql(&vec![filter.dimension.clone()],true),
                     filter.filter_operator.to_uppercase(),
                     filter.filter_value
                 ),

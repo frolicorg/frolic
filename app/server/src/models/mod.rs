@@ -12,12 +12,14 @@ pub struct RESTInputModel {
 pub struct Metric {
     pub field: String,
     pub aggregate_operator: Option<String>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Dimension {
     pub field: String,
     pub transformations: Option<String>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

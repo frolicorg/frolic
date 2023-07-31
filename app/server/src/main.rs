@@ -33,6 +33,22 @@ async fn get_query(
     Ok(format!("SQL:\n{}!", sql_query))
 }
 
+#[get("/fetch_schema")]
+async fn fetch_schema(
+    // json_query: web::Json<RESTInputModel>,
+    sql_connection_pool: web::Data<mysql::Pool>,
+) -> Result<String> {
+    //import schema directly from connection
+    let output_file_path = "data/table_schema_db.json";
+    create_table_schema(&sql_connection_pool,output_file_path);
+    
+    let input_file_path = "data/relationships.json";
+    add_table_relationship(input_file_path,output_file_path);
+
+    // let sql_query = query_engine::get_query(&json_query, &app_state.tables);
+    Ok(format!("Note : Please restart the Application so that the changed reflect"))
+}
+
 #[get("/sample_query")]
 pub(crate) async fn sample_query(
     data: web::Data<mysql::Pool>,
@@ -78,6 +94,7 @@ fn get_conn_builder(
         .pass(Some(db_password))
 }
 
+
 fn read_tables_from_file(file_path: &str) -> Result<Vec<Table>, Box<dyn std::error::Error>> {
     // Read the contents of the file
     let mut file = File::open(file_path)?;
@@ -114,14 +131,9 @@ async fn main() -> std::io::Result<()> {
     let sql_shared_data = web::Data::new(pool.clone());
 
     log::info!("importing table schema");
-    //import directly from connection
-    // let tables = db_utils::fetch_all_tables(&pool);
-    let output_file_path = "data/table_schema_db.json";
-    create_table_schema(&pool,output_file_path);
     
-    let input_file_path = "data/relationships.json";
-    add_table_relationship(input_file_path,output_file_path);
-    // let schema_file_path = "data/table_schema_db.json";
+    //import tabled from schema file
+    let output_file_path = "data/table_schema_db.json";
     let tables = match read_tables_from_file(&output_file_path) {
         Ok(tables) => tables,
         Err(err) => {
@@ -146,6 +158,7 @@ async fn main() -> std::io::Result<()> {
             .service(sample_query)
             .service(get_query)
             .service(rest_api)
+            .service(fetch_schema)
     })
     .bind(("0.0.0.0", 8080))?
     .run()
