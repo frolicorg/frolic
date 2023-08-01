@@ -11,6 +11,7 @@ mod query_engine;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use memcache::Client;
 
 #[post("/api")]
 async fn rest_api(
@@ -19,8 +20,9 @@ async fn rest_api(
     app_state: web::Data<AppState>,
 ) -> actix_web::Result<impl Responder> {
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
+    let cache_client = memcache::Client::connect("memcache://127.0.0.1:11211").unwrap();
     let response_data =
-        web::block(move || db_utils::execute_query(&sql_query, &sql_connection_pool)).await??;
+        web::block(move || db_utils::execute_query(&sql_query, &sql_connection_pool,&cache_client)).await??;
     Ok(web::Json(response_data))
 }
 
@@ -47,19 +49,6 @@ async fn fetch_schema(
 
     // let sql_query = query_engine::get_query(&json_query, &app_state.tables);
     Ok(format!("Note : Please restart the Application so that the changed reflect"))
-}
-
-#[get("/sample_query")]
-pub(crate) async fn sample_query(
-    data: web::Data<mysql::Pool>,
-) -> actix_web::Result<impl Responder> {
-    let mut query = r"
-        SELECT category, price FROM products
-        "
-    .to_string();
-
-    let response_data = web::block(move || db_utils::execute_query(&query, &data)).await??;
-    Ok(web::Json(response_data))
 }
 
 // #[get("/test")]
@@ -155,7 +144,6 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .service(echo)
             // .service(test)
-            .service(sample_query)
             .service(get_query)
             .service(rest_api)
             .service(fetch_schema)

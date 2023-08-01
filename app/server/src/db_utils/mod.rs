@@ -9,7 +9,10 @@ use std::fs::File;
 use std::io::Read;
 use crate::models;
 use models::{RESTInputModel, ResponseData,Table,Column};
-
+use memcache::Client;
+use serde_json::{to_string,from_str};
+use sha2::{Sha256, Digest};
+use hex;
 // use mysql::prelude::*;
 use mysql::{Pool, PooledConn};
 
@@ -34,6 +37,11 @@ pub struct Relationship {
     pub child_column: String,
 }
 
+#[derive(Serialize,Deserialize)]
+struct SerializedData {
+    data: Vec<Vec<String>>,
+}
+
 impl actix_web::ResponseError for PersistenceError {
     fn status_code(&self) -> StatusCode {
         match self {
@@ -54,13 +62,39 @@ impl actix_web::ResponseError for PersistenceError {
 pub fn execute_query(
     query: &String,
     sql_connection_pool: &mysql::Pool,
+    cache_client: &Client,
 ) -> Result<ResponseData, PersistenceError> {
+    // Check if the result is already in the cache
+    let cache_key = format!("{}", hash_query_to_unique_id(query));
+    if let Ok(cached_result) = cache_client.get::<String>(&cache_key) {
+        if let Some(result) = cached_result {
+            let deserialized_data = deserialize_data(&result).unwrap();
+            let result = ResponseData {
+                data: deserialized_data,
+            };
+            return Ok(result);
+        }
+    }
+
     let mut conn = sql_connection_pool.get_conn()?;
 
-    Ok(ResponseData {
+    // Execute the query
+    let result = ResponseData {
         data: run_query(&query, &mut conn)?,
-    })
+    };
+    match serialize_data(&result.data) {
+        Ok(json) => {
+            println!("{}",&cache_key);
+            cache_client.set(&cache_key, json, 0).ok();
+        }
+
+        
+        Err(err) => println!("Serialization failed: {}", err),
+    }
+
+    Ok(result)
 }
+
 
 fn run_query(
     query: &String,
@@ -203,5 +237,41 @@ pub fn create_table_schema(pool: &Pool,output_file_path: &str) -> () {
                 .expect("Error writing to file");
         }
         Err(err) => eprintln!("Error fetching tables: {:?}", err),
+    }
+}
+// Function to serialize the data output of run_query to JSON
+fn serialize_data(data: &Vec<Vec<String>>) -> Result<String, String> {
+    // Convert the data into a structured format
+    let result = SerializedData { data: data.to_vec() };
+    match to_string(&result) {
+        Ok(serialized) => Ok(serialized),
+        Err(err) => Err(format!("Serialization error: {}", err)),
+    }
+}
+fn deserialize_data(serialized: &str) -> Result<Vec<Vec<String>>, String> {
+    match from_str::<SerializedData>(serialized) {
+        Ok(deserialized) => Ok(deserialized.data),
+        Err(err) => Err(format!("Deserialization error: {}", err)),
+    }
+}
+
+fn sanitize_query(query: &str) -> String {
+    query.chars().filter(|c| c.is_alphanumeric()).collect()
+}
+
+fn hash_query_to_unique_id(query: &str) -> String {
+    // Create a SHA-256 hash of the sanitized query
+    let sanitized_query: String = query.chars().filter(|c| c.is_alphanumeric()).collect();
+    let mut hasher = Sha256::new();
+    hasher.update(sanitized_query.as_bytes());
+    let hash_result = hasher.finalize();
+
+    // Convert the hash bytes to a hexadecimal string and truncate it if necessary
+    let hex_hash = hex::encode(hash_result);
+    let max_length = 249; // Maximum supported key length
+    if hex_hash.len() <= max_length {
+        hex_hash
+    } else {
+        hex_hash[..max_length].to_string()
     }
 }
