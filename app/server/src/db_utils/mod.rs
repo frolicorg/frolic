@@ -121,20 +121,6 @@ fn sql_row_to_string_list(row: mysql::Row) -> Vec<String> {
     string_list
 }
 
-// #[derive(Debug, Serialize, Deserialize)]
-// pub struct ColumnInfo {
-//     pub name: String,
-//     pub datatype: String,
-// }
-
-// Struct to represent table information
-// #[derive(Debug, Serialize, Deserialize)]
-// pub struct TableInfo {
-//     pub name: String,
-//     pub columns: Vec<ColumnInfo>,
-//     pub relationships: 
-// }
-
 // Function to fetch all table names in the database
 pub fn fetch_all_tables(pool: &Pool) -> Result<Vec<String>, mysql::Error> {
     let mut conn = pool.get_conn()?;
