@@ -60,14 +60,19 @@ pub fn execute_query(
     query: &String,
     sql_connection_pool: &mysql::Pool,
     cache_client: &Client,
+    is_caching: &bool,
 ) -> Result<ResponseData, PersistenceError> {
     // Check if the result is already in the cache
     let cache_key = format!("{}", hash_query_to_unique_id(query));
-    if let Ok(cached_result) = cache_client.get::<String>(&cache_key) {
-        if let Some(result) = cached_result {
-            match deserialize_data::<ResponseData>(&result) {
-                Ok(response) => return Ok(response),
-                Err(err) => println!("DeSerialization failed: {}", err),
+    println!("Caching : {}",is_caching);
+    if (is_caching.clone() == true){
+        
+        if let Ok(cached_result) = cache_client.get::<String>(&cache_key) {
+            if let Some(result) = cached_result {
+                match deserialize_data::<ResponseData>(&result) {
+                    Ok(response) => return Ok(response),
+                    Err(err) => println!("DeSerialization failed: {}", err),
+                }
             }
         }
     }
@@ -77,14 +82,16 @@ pub fn execute_query(
     // Execute the query
     let response = run_query(&query, &mut conn)?;
 
-    match serialize_data::<String>(&response) {
-        Ok(json) => {
-            cache_client.set(&cache_key, json, 0).ok();
-            // Remove the oldest item from the cache if the limit is reached
-            clean_cache_if_needed(cache_client);
-        }
+    if (is_caching.clone() == true){
+        match serialize_data::<String>(&response) {
+            Ok(json) => {
+                cache_client.set(&cache_key, json, 0).ok();
+                // Remove the oldest item from the cache if the limit is reached
+                clean_cache_if_needed(cache_client);
+            }
 
-        Err(err) => println!("Serialization failed: {}", err),
+            Err(err) => println!("Serialization failed: {}", err),
+        }
     }
 
     Ok(response)

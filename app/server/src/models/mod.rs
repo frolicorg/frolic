@@ -61,6 +61,7 @@ pub struct Table {
 pub struct AppState {
     pub app_name: String,
     pub tables: Vec<Table>,
+    pub is_caching: bool,
 }
 
 impl Table {
