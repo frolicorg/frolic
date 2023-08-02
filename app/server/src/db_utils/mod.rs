@@ -61,6 +61,7 @@ pub fn execute_query(
     sql_connection_pool: &mysql::Pool,
     cache_client: &Client,
     is_caching: &bool,
+    caching_expiry: &u32,
 ) -> Result<ResponseData, PersistenceError> {
     // Check if the result is already in the cache
     let cache_key = format!("{}", hash_query_to_unique_id(query));
@@ -85,7 +86,7 @@ pub fn execute_query(
     if (is_caching.clone() == true){
         match serialize_data::<String>(&response) {
             Ok(json) => {
-                cache_client.set(&cache_key, json, 0).ok();
+                cache_client.set(&cache_key, json, caching_expiry.clone()).ok();
                 // Remove the oldest item from the cache if the limit is reached
                 clean_cache_if_needed(cache_client);
             }

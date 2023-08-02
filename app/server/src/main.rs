@@ -22,7 +22,7 @@ async fn rest_api(
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
     let cache_client = memcache::Client::connect("memcache://127.0.0.1:11211").unwrap();
     let response_data =
-        web::block(move || db_utils::execute_query(&sql_query, &sql_connection_pool,&cache_client,&app_state.is_caching)).await??;
+        web::block(move || db_utils::execute_query(&sql_query, &sql_connection_pool,&cache_client,&app_state.is_caching,&app_state.caching_expiry)).await??;
     Ok(web::Json(response_data))
 }
 
@@ -131,6 +131,7 @@ async fn main() -> std::io::Result<()> {
         }
     };
     let is_caching = true;
+    let caching_expiry = 3600;
 
     // let tables_json = serde_json::to_string_pretty(&tables).unwrap();
     // log::info!("{}", tables_json);
@@ -142,6 +143,7 @@ async fn main() -> std::io::Result<()> {
                 app_name: String::from("Actix Web"),
                 tables: tables.clone(),
                 is_caching: is_caching.clone(),
+                caching_expiry: caching_expiry.clone(),
             }))
             .service(hello)
             .service(echo)

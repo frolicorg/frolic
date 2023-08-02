@@ -62,6 +62,7 @@ pub struct AppState {
     pub app_name: String,
     pub tables: Vec<Table>,
     pub is_caching: bool,
+    pub caching_expiry: u32
 }
 
 impl Table {
