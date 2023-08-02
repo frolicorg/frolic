@@ -31,6 +31,7 @@ pub struct Filter {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ResponseData {
+    pub attributes: Vec<String>,
     pub data: Vec<Vec<String>>,
 }
 

@@ -1,18 +1,18 @@
+use crate::models;
 use actix_web::http::StatusCode;
 use derive_more::{Display, Error, From};
+use hex;
+use memcache::Client;
+use models::{Column, RESTInputModel, ResponseData, Table};
 use mysql::from_value_opt;
 use mysql::prelude::Queryable;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use serde_json::{from_str, to_string};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
-use crate::models;
-use models::{RESTInputModel, ResponseData,Table,Column};
-use memcache::Client;
-use serde_json::{to_string,from_str};
-use sha2::{Sha256, Digest};
-use hex;
 // use mysql::prelude::*;
 use mysql::{Pool, PooledConn};
 use std::collections::VecDeque;
@@ -31,8 +31,7 @@ pub enum PersistenceError {
     Unknown,
 }
 
-
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Relationship {
     pub parent_table: String,
     pub child_table: String,
@@ -66,10 +65,8 @@ pub fn execute_query(
     let cache_key = format!("{}", hash_query_to_unique_id(query));
     if let Ok(cached_result) = cache_client.get::<String>(&cache_key) {
         if let Some(result) = cached_result {
-            match deserialize_data::<ResponseData>(&result){
-                Ok(response) => {
-                    return Ok(response)
-                }
+            match deserialize_data::<ResponseData>(&result) {
+                Ok(response) => return Ok(response),
                 Err(err) => println!("DeSerialization failed: {}", err),
             }
         }
@@ -78,35 +75,44 @@ pub fn execute_query(
     let mut conn = sql_connection_pool.get_conn()?;
 
     // Execute the query
-    let result = ResponseData {
-        data: run_query(&query, &mut conn)?,
-    };
-    match serialize_data::<String>(&result) {
+    let response = run_query(&query, &mut conn)?;
+
+    match serialize_data::<String>(&response) {
         Ok(json) => {
             cache_client.set(&cache_key, json, 0).ok();
             // Remove the oldest item from the cache if the limit is reached
             clean_cache_if_needed(cache_client);
         }
 
-        
         Err(err) => println!("Serialization failed: {}", err),
     }
 
-    Ok(result)
+    Ok(response)
 }
 
+fn run_query(query: &String, conn: &mut mysql::PooledConn) -> mysql::error::Result<ResponseData> {
+    let mut column_names: Vec<String> = vec![];
 
-fn run_query(
-    query: &String,
-    conn: &mut mysql::PooledConn,
-) -> mysql::error::Result<Vec<Vec<String>>> {
-    conn.query_map(query, |row: mysql::Row| {
-        let test = sql_row_to_string_list(row);
-        test
+    let response_data = conn.query_map(query, |row: mysql::Row| {
+        if column_names.len() == 0 {
+            // Get the columns of the first row
+            column_names = row
+                .columns_ref()
+                .iter()
+                .map(|c| c.name_str().to_string())
+                .collect();
+        }
+
+        sql_row_to_string_list(&row)
+    });
+
+    Ok(ResponseData {
+        attributes: column_names,
+        data: response_data?,
     })
 }
 
-fn sql_row_to_string_list(row: mysql::Row) -> Vec<String> {
+fn sql_row_to_string_list(row: &mysql::Row) -> Vec<String> {
     let mut string_list = Vec::new();
 
     for (index, column) in row.columns_ref().iter().enumerate() {
@@ -148,20 +154,29 @@ pub fn update_relationship(
     relationship: Relationship,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Read the JSON file
-    
+
     let json_str = fs::read_to_string(file_path)?;
 
     // Deserialize the JSON into a vector of Relationship structs
     let mut tables: Vec<Table> = serde_json::from_str(&json_str)?;
     // let mut relationships: Vec<Relationship> = serde_json::from_str(&json_str)?;
 
-    if let Some(table) = tables.iter_mut().find(|t| t.name == relationship.parent_table) {
+    if let Some(table) = tables
+        .iter_mut()
+        .find(|t| t.name == relationship.parent_table)
+    {
         // Create a new relationship entry
-        let new_relationship = HashMap::from([(relationship.child_table.to_string(), (relationship.parent_column.to_string(), relationship.child_column.to_string()))]);
+        let new_relationship = HashMap::from([(
+            relationship.child_table.to_string(),
+            (
+                relationship.parent_column.to_string(),
+                relationship.child_column.to_string(),
+            ),
+        )]);
 
         // Insert the new relationship into the table's relationships
         table.relationships.push(new_relationship);
-    // Find the relationship to update
+        // Find the relationship to update
     }
 
     // Serialize the modified vector back to JSON
@@ -173,8 +188,7 @@ pub fn update_relationship(
     Ok(())
 }
 
-pub fn add_table_relationship(input_file_path: &str,output_file_path: &str) -> () {
-
+pub fn add_table_relationship(input_file_path: &str, output_file_path: &str) -> () {
     // Read the JSON file into a string
     let mut json_str = String::new();
     File::open(&input_file_path)
@@ -182,9 +196,9 @@ pub fn add_table_relationship(input_file_path: &str,output_file_path: &str) -> (
         .expect("Error reading JSON file");
 
     // Deserialize the JSON string into relationships vector
-    let relationships: Vec<Relationship> = serde_json::from_str(&json_str)
-        .expect("Error parsing JSON");
-    
+    let relationships: Vec<Relationship> =
+        serde_json::from_str(&json_str).expect("Error parsing JSON");
+
     for relationship in &relationships {
         let cloned_relationship = relationship.clone();
         if let Err(err) = update_relationship(&output_file_path, cloned_relationship) {
@@ -195,7 +209,7 @@ pub fn add_table_relationship(input_file_path: &str,output_file_path: &str) -> (
     }
 }
 
-pub fn create_table_schema(pool: &Pool,output_file_path: &str) -> () {
+pub fn create_table_schema(pool: &Pool, output_file_path: &str) -> () {
     match fetch_all_tables(&pool) {
         Ok(tables) => {
             let mut table_info_list: Vec<Table> = Vec::new();
@@ -206,21 +220,22 @@ pub fn create_table_schema(pool: &Pool,output_file_path: &str) -> () {
                         let table_info = Table {
                             name: table_name.clone(),
                             columns,
-                            relationships:relationships.clone(),
+                            relationships: relationships.clone(),
                         };
                         table_info_list.push(table_info);
                     }
-                    Err(err) => eprintln!("Error fetching columns for table {}: {:?}", table_name, err),
+                    Err(err) => {
+                        eprintln!("Error fetching columns for table {}: {:?}", table_name, err)
+                    }
                 }
             }
 
             // Convert the table_info_list to a JSON string
-            let json_string = serde_json::to_string_pretty(&table_info_list)
-                .expect("Error converting to JSON");
+            let json_string =
+                serde_json::to_string_pretty(&table_info_list).expect("Error converting to JSON");
 
             // Write the JSON string to a file
-            std::fs::write(output_file_path, json_string)
-                .expect("Error writing to file");
+            std::fs::write(output_file_path, json_string).expect("Error writing to file");
         }
         Err(err) => eprintln!("Error fetching tables: {:?}", err),
     }
@@ -276,7 +291,7 @@ fn clean_cache_if_needed(cache_client: &Client) {
     //     .into_iter()
     //     .filter_map(|(key, )| key.parse::<String>().ok())
     //     .collect();
-    println!("{}",keys.join(","))
+    println!("{}", keys.join(","))
     // let curr_items_values: Vec<u64> = stats
     //     .iter()
     //     .filter_map(|(_, stat)| stat.get("curr_items").and_then(|value| value.parse().ok()))
