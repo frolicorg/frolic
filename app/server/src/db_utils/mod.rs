@@ -15,6 +15,9 @@ use sha2::{Sha256, Digest};
 use hex;
 // use mysql::prelude::*;
 use mysql::{Pool, PooledConn};
+use std::collections::VecDeque;
+
+const MAX_CACHE_SIZE: usize = 50;
 
 #[derive(Debug, Display, Error, From)]
 pub enum PersistenceError {
@@ -35,11 +38,6 @@ pub struct Relationship {
     pub child_table: String,
     pub parent_column: String,
     pub child_column: String,
-}
-
-#[derive(Serialize,Deserialize)]
-struct SerializedData {
-    data: Vec<Vec<String>>,
 }
 
 impl actix_web::ResponseError for PersistenceError {
@@ -68,11 +66,12 @@ pub fn execute_query(
     let cache_key = format!("{}", hash_query_to_unique_id(query));
     if let Ok(cached_result) = cache_client.get::<String>(&cache_key) {
         if let Some(result) = cached_result {
-            let deserialized_data = deserialize_data(&result).unwrap();
-            let result = ResponseData {
-                data: deserialized_data,
-            };
-            return Ok(result);
+            match deserialize_data::<ResponseData>(&result){
+                Ok(response) => {
+                    return Ok(response)
+                }
+                Err(err) => println!("DeSerialization failed: {}", err),
+            }
         }
     }
 
@@ -82,10 +81,11 @@ pub fn execute_query(
     let result = ResponseData {
         data: run_query(&query, &mut conn)?,
     };
-    match serialize_data(&result.data) {
+    match serialize_data::<String>(&result) {
         Ok(json) => {
-            println!("{}",&cache_key);
             cache_client.set(&cache_key, json, 0).ok();
+            // Remove the oldest item from the cache if the limit is reached
+            clean_cache_if_needed(cache_client);
         }
 
         
@@ -225,18 +225,18 @@ pub fn create_table_schema(pool: &Pool,output_file_path: &str) -> () {
         Err(err) => eprintln!("Error fetching tables: {:?}", err),
     }
 }
-// Function to serialize the data output of run_query to JSON
-fn serialize_data(data: &Vec<Vec<String>>) -> Result<String, String> {
-    // Convert the data into a structured format
-    let result = SerializedData { data: data.to_vec() };
-    match to_string(&result) {
+// Function to serialize & deserialize the data output of run_query to JSON
+
+fn serialize_data<T: Serialize>(data: &ResponseData) -> Result<String, String> {
+    match to_string(data) {
         Ok(serialized) => Ok(serialized),
         Err(err) => Err(format!("Serialization error: {}", err)),
     }
 }
-fn deserialize_data(serialized: &str) -> Result<Vec<Vec<String>>, String> {
-    match from_str::<SerializedData>(serialized) {
-        Ok(deserialized) => Ok(deserialized.data),
+
+fn deserialize_data<T: Deserialize<'static>>(serialized: &str) -> Result<ResponseData, String> {
+    match from_str::<ResponseData>(serialized) {
+        Ok(deserialized) => Ok(deserialized),
         Err(err) => Err(format!("Deserialization error: {}", err)),
     }
 }
@@ -260,4 +260,43 @@ fn hash_query_to_unique_id(query: &str) -> String {
     } else {
         hex_hash[..max_length].to_string()
     }
+}
+
+// Function to clean the cache if the limit is reached
+//{TODO}
+fn clean_cache_if_needed(cache_client: &Client) {
+    // Get the list of all keys currently in the cache
+    let stats = cache_client.stats().unwrap();
+    // let keys: Vec<String> = stats.iter().map(|(_, key)| key.to_string()).collect();
+    let keys: Vec<String> = stats
+        .iter()
+        .flat_map(|(_, stats)| stats.keys().cloned())
+        .collect();
+    // let keys: &Vec<String> = stats
+    //     .into_iter()
+    //     .filter_map(|(key, )| key.parse::<String>().ok())
+    //     .collect();
+    println!("{}",keys.join(","))
+    // let curr_items_values: Vec<u64> = stats
+    //     .iter()
+    //     .filter_map(|(_, stat)| stat.get("curr_items").and_then(|value| value.parse().ok()))
+    //     .collect();
+    // println!("{:?}",curr_items_values);
+    // If the number of keys exceeds the maximum cache size, remove the oldest keys
+    // if keys.len() > MAX_CACHE_SIZE {
+    //     // Sort the keys based on their insertion order (the ones inserted first will come first)
+    //     let mut sorted_keys = VecDeque::from(&keys);
+    //     sorted_keys.make_contiguous().sort();
+
+    //     // Determine the number of keys to remove from the cache
+    //     let num_keys_to_remove = keys.len() - MAX_CACHE_SIZE;
+
+    //     // Remove the oldest keys from the cache
+    //     for key in sorted_keys.into_iter().take(num_keys_to_remove) {
+    //         cache_client.delete(&key).ok();
+    //     }
+    // }
+    // else {
+    //     println!("Number of Keys : {}",keys.len());
+    // }
 }

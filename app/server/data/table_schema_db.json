@@ -38,6 +38,20 @@
         "name": "total",
         "datatype": "float"
       }
+    ],
+    "relationships": [
+      {
+        "users": [
+          "user_id",
+          "id"
+        ]
+      },
+      {
+        "products": [
+          "product_id",
+          "id"
+        ]
+      }
     ]
   },
   {
@@ -79,6 +93,20 @@
         "name": "vendor",
         "datatype": "varchar"
       }
+    ],
+    "relationships": [
+      {
+        "orders": [
+          "id",
+          "product_id"
+        ]
+      },
+      {
+        "reviews": [
+          "id",
+          "product_id"
+        ]
+      }
     ]
   },
   {
@@ -107,6 +135,14 @@
       {
         "name": "body",
         "datatype": "varchar"
+      }
+    ],
+    "relationships": [
+      {
+        "products": [
+          "product_id",
+          "id"
+        ]
       }
     ]
   },
@@ -164,6 +200,14 @@
       {
         "name": "source",
         "datatype": "varchar"
+      }
+    ],
+    "relationships": [
+      {
+        "orders": [
+          "id",
+          "user_id"
+        ]
       }
     ]
   }
