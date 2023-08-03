@@ -58,21 +58,22 @@ impl actix_web::ResponseError for PersistenceError {
 pub fn execute_query(
     query: &String,
     sql_connection_pool: &mysql::Pool,
-    cache_client: &Client,
+    cache_client: &Option<Client>,
     is_caching: &bool,
     caching_expiry: &u32,
 ) -> Result<ResponseData, PersistenceError> {
     // Check if the result is already in the cache
     let cache_key = format!("{}", hash_query_to_unique_id(query));
     println!("Caching : {}",is_caching);
-    if is_caching.clone() == true{
-        
-        if let Ok(cached_result) = cache_client.get::<String>(&cache_key) {
-            if let Some(result) = cached_result {
-                match deserialize_data::<ResponseData>(&result) {
-                    Ok(response) => return Ok(response),
-                    Err(err) => println!("DeSerialization failed: {}", err),
-                }
+    if *is_caching{
+        if let Some(client) = cache_client {
+            if let Ok(cached_result) = client.get::<String>(&cache_key) {
+                if let Some(result) = cached_result {
+                    match deserialize_data::<ResponseData>(&result) {
+                        Ok(response) => return Ok(response),
+                        Err(err) => println!("DeSerialization failed: {}", err),
+                    }
+                } 
             }
         }
     }
@@ -82,15 +83,17 @@ pub fn execute_query(
     // Execute the query
     let response = run_query(&query, &mut conn)?;
 
-    if is_caching.clone() == true{
-        match serialize_data::<String>(&response) {
-            Ok(json) => {
-                cache_client.set(&cache_key, json, caching_expiry.clone()).ok();
-                // Remove the oldest item from the cache if the limit is reached
-                clean_cache_if_needed(cache_client);
-            }
+    if *is_caching{
+        if let Some(client) = cache_client {
+            match serialize_data::<String>(&response) {
+                Ok(json) => {
+                    client.set(&cache_key, json, caching_expiry.clone()).ok();
+                    // Remove the oldest item from the cache if the limit is reached
+                    clean_cache_if_needed(client);
+                }
 
-            Err(err) => println!("Serialization failed: {}", err),
+                Err(err) => println!("Serialization failed: {}", err),
+            }
         }
     }
 

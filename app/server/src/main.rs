@@ -11,7 +11,7 @@ mod query_engine;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use memcache::Client;
+use memcache::{Client, MemcacheError};
 
 #[post("/api")]
 async fn rest_api(
@@ -19,10 +19,30 @@ async fn rest_api(
     sql_connection_pool: web::Data<mysql::Pool>,
     app_state: web::Data<AppState>,
 ) -> actix_web::Result<impl Responder> {
+    let mut is_caching = app_state.is_caching.clone();
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
-    let cache_client = memcache::Client::connect("memcache://127.0.0.1:11211").unwrap();
-    let response_data =
-        web::block(move || db_utils::execute_query(&sql_query, &sql_connection_pool,&cache_client,&app_state.is_caching,&app_state.caching_expiry)).await??;
+    // let cache_client = match memcache::Client::connect("memcache://127.0.0.1:11211") {
+    //     Ok(client) => Some(client),
+    //     Err(_) => None,
+    // };
+    let cache_client = match memcache::Client::connect("memcache://127.0.0.1:11211?connect_timeout=1") {
+        Ok(client) => Some(client),
+        Err(_) => {
+            eprintln!("Error: Failed to connect to memcache server.");
+            is_caching = false;
+            None
+        }
+    };
+    // let cache_client = None;
+    let response_data = web::block(move || {
+        db_utils::execute_query(
+            &sql_query,
+            &sql_connection_pool,
+            &cache_client,
+            &is_caching,
+            &app_state.caching_expiry,
+        )
+    }).await??;    
     Ok(web::Json(response_data))
 }
 
