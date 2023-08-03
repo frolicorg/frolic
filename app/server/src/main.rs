@@ -8,6 +8,7 @@ mod db_utils;
 use db_utils::{fetch_all_tables,fetch_columns_for_table,create_table_schema,add_table_relationship};
 mod models;
 mod query_engine;
+mod cache;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
