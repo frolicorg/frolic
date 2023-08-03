@@ -1,7 +1,7 @@
 
 <p align="center">
 <a href="">
-  <img src="static/Frolic Icon.png" alt="Appsmith Logo" width="350">
+  <img src="static/Frolic Icon.png" alt="Frolic Logo" width="350">
 </a>
 </p>
 
