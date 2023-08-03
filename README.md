@@ -115,6 +115,10 @@ You can start using the docker container path to query your data.
 
 We currently support MySQL database. We will add integrations with other databases in the future.
 
+## Why Rust?
+
+Rust is much faster and performant compared to other web frameworks. We have build this project using `actix-web`, which is one of the [fastest web frameworks in the world](https://www.techempower.com/benchmarks/#section=data-r21). Checkout the comparison between ExpressJS and Actix-Web [here](https://medium.com/@maxsparr0w/performance-of-node-js-compared-to-actix-web-37f20810fb1a).
+
 ## Support and Community
 
 Issues are inevitable. When you have one, our entire team and our active developer community is around to help.
