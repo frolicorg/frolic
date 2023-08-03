@@ -14,8 +14,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Read;
 // use mysql::prelude::*;
-use mysql::{Pool, PooledConn};
-use std::collections::VecDeque;
+use mysql::{Pool};
 
 const MAX_CACHE_SIZE: usize = 50;
 
@@ -66,7 +65,7 @@ pub fn execute_query(
     // Check if the result is already in the cache
     let cache_key = format!("{}", hash_query_to_unique_id(query));
     println!("Caching : {}",is_caching);
-    if (is_caching.clone() == true){
+    if is_caching.clone() == true{
         
         if let Ok(cached_result) = cache_client.get::<String>(&cache_key) {
             if let Some(result) = cached_result {
@@ -83,7 +82,7 @@ pub fn execute_query(
     // Execute the query
     let response = run_query(&query, &mut conn)?;
 
-    if (is_caching.clone() == true){
+    if is_caching.clone() == true{
         match serialize_data::<String>(&response) {
             Ok(json) => {
                 cache_client.set(&cache_key, json, caching_expiry.clone()).ok();

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RESTInputModel {
-    pub metrics: Vec<Metric>,
-    pub dimensions: Vec<Dimension>,
+    pub metrics: Option<Vec<Metric>>,
+    pub dimensions: Option<Vec<Dimension>>,
     pub filters: Option<Vec<Filter>>,
 }
 

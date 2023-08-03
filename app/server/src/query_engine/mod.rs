@@ -10,31 +10,41 @@ pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String 
     let tables: Vec<Table> = tables.iter().cloned().collect();
 
     //fetch the columns requested by user
-    let metric_fields: Vec<String> = query
-        .metrics
-        .iter()
-        .map(|metric| metric.field.clone())
-        .collect();
-    let dimesion_fields: Vec<String> = query
-        .dimensions
-        .iter()
-        .map(|metric| metric.field.clone())
-        .collect();
-
     let mut filter_fields = Vec::new();
+    let mut metric_fields = Vec::new();
+    let mut dimension_fields = Vec::new();
+    let mut all_fields: Vec<String> = Vec::new();
+    let mut metrics_sql = String::new();
+    let mut dimensions_sql = String::new();
+    let mut dimensions_group_sql = String::new();
+
+    if let Some(metrics) = &query.metrics {
+        metrics_sql = metrics_to_sql(metrics);
+        // println!("{}",metrics_sql);
+        metric_fields = metrics
+            .iter()
+            .map(|metric| metric.field.clone())
+            .collect();
+        all_fields.extend(metric_fields);
+    };
+    if let Some(dimensions) = &query.dimensions {
+        dimensions_sql = dimensions_to_sql(dimensions,false);
+        dimensions_group_sql = "group by ".to_string() + &dimensions_to_sql(dimensions,true);
+        dimension_fields = dimensions
+            .iter()
+            .map(|dimension| dimension.field.clone())
+            .collect();
+        all_fields.extend(dimension_fields);
+    };
+    
     if let Some(filters) = &query.filters {
         filter_fields = filters
             .iter()
             .map(|filter| filter.dimension.field.clone())
             .collect();
-    }
+        all_fields.extend(filter_fields);
+    };
 
-    //this field captures all the column fields that are requested by the user
-    let mut all_fields: Vec<String> = Vec::new();
-    all_fields.extend(metric_fields);
-    all_fields.extend(dimesion_fields);
-    all_fields.extend(filter_fields);
-    
     //check if the columns are present in the tables or not, if present create a hashmap as well to get the datatype
     let mut field_datatype_map: HashMap<&String, &str> = HashMap::new();
     for field in &all_fields{
@@ -46,26 +56,24 @@ pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String 
             None => return format!("Column : {} not found or invald input format",field)
         }
     }
-
-    //get the sql for each part separately
-    let metrics_sql = metrics_to_sql(&query.metrics);
-    let dimensions_sql = dimensions_to_sql(&query.dimensions,false);
-    let dimensions_group_sql = dimensions_to_sql(&query.dimensions,true);
+    
     let filters_sql = if let Some(filters) = &query.filters {
         filters_to_sql(filters,&field_datatype_map)
     } else {
         String::new()
     };
-    let select_table_sql = all_fields.join(", ");
-
     //get all the table names requested by the user & process them
     let required_table_names = extract_table_columns(all_fields);
     let table_sql = handle_required_table(tables, required_table_names);
 
     //generate final mysql query
+    let mut comma = String::new();
+    if dimensions_sql != "" && metrics_sql != ""{
+        comma = ",".to_string();
+    }
     format!(
-        "select {}, {} from {} {} group by {} ;",
-        dimensions_sql, metrics_sql, table_sql, filters_sql, dimensions_group_sql
+        "select {} {} {} from {} {} {} ;",
+        dimensions_sql,comma, metrics_sql, table_sql, filters_sql, dimensions_group_sql
     )
 }
 
