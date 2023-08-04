@@ -58,7 +58,7 @@ You can pass the metrics you require in the `metrics` field as an array. The `fi
 
 The `dimensions` field allows you to categorize the metrics returned by the API. To specify the column by which you want to categorize the `metrics`, use the `field` operator and specify the column name in `<table_name>.<column_name>` format.
 
-The data returned by the API will be a list of array. The array will contain the metric values and the dimension by which they are categorized.
+The data returned by the API will be a list of JSON which contains the dimensions and the attributes specified in the request.
 
 The output of the above request will be as follows:
 
