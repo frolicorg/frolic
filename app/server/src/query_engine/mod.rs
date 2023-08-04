@@ -53,7 +53,12 @@ pub fn get_query(query: &models::DataRequest, tables: &Vec<Table>) -> String {
     }
 
     let filters_sql = if let Some(filters) = &query.filters {
-        filters_to_sql(filters, &field_datatype_map)
+        if filters.len() > 0{
+            filters_to_sql(filters, &field_datatype_map)
+        }
+        else {
+            String::new()
+        }
     } else {
         String::new()
     };
