@@ -62,6 +62,7 @@ impl actix_web::ResponseError for PersistenceError {
 }
 
 pub fn execute_query(
+    json_query: &RESTInputModel,
     query: &String,
     sql_connection_pool: &mysql::Pool,
     cache_client: &Option<Client>,
@@ -87,8 +88,9 @@ pub fn execute_query(
 
     let mut conn = sql_connection_pool.get_conn()?;
 
+    let column_headers: Vec<String> = get_column_headers(&json_query);
     // Execute the query
-    let response = run_query(&query, &mut conn)?;
+    let response = run_query(&column_headers, &query, &mut conn)?;
 
     if *is_caching {
         if let Some(client) = cache_client {
@@ -107,17 +109,15 @@ pub fn execute_query(
     Ok(response)
 }
 
-fn run_query(query: &String, conn: &mut mysql::PooledConn) -> mysql::error::Result<ResponseData> {
+fn run_query(
+    column_headers: &Vec<String>,
+    query: &String,
+    conn: &mut mysql::PooledConn,
+) -> mysql::error::Result<ResponseData> {
     log::info!("Executing Query");
 
     let response_data = conn.query_map(query, |row: mysql::Row| {
-        sql_row_to_hash_map(
-            &vec![
-                "products.category".to_string(),
-                "products.price".to_string(),
-            ],
-            &row,
-        )
+        sql_row_to_hash_map(column_headers, &row)
     });
 
     Ok(ResponseData {
@@ -125,21 +125,47 @@ fn run_query(query: &String, conn: &mut mysql::PooledConn) -> mysql::error::Resu
     })
 }
 
-fn sql_row_to_hash_map(keys: &Vec<String>, row: &mysql::Row) -> HashMap<String, String> {
+fn get_column_headers(json_query: &RESTInputModel) -> Vec<String> {
+    let mut column_headers: Vec<String> = Vec::new();
+
+    if let Some(ref dimensions) = json_query.dimensions {
+        column_headers.extend(dimensions.iter().map(|item| {
+            if let Some(ref name) = item.name {
+                name.clone()
+            } else {
+                item.field.clone()
+            }
+        }));
+    }
+
+    if let Some(ref metrics) = json_query.metrics {
+        column_headers.extend(metrics.iter().map(|item| {
+            if let Some(ref name) = item.name {
+                name.clone()
+            } else {
+                item.field.clone()
+            }
+        }));
+    }
+
+    column_headers
+}
+
+fn sql_row_to_hash_map(column_headers: &Vec<String>, row: &mysql::Row) -> HashMap<String, String> {
     let mut hash_map: HashMap<String, String> = HashMap::new();
 
     for (index, column) in row.columns_ref().iter().enumerate() {
         if let Some(Ok(value)) = row.get_opt(index) {
             let value_as_string = from_value_opt::<String>(value);
 
-            if let Some(key) = keys.get(index) {
+            if let Some(key) = column_headers.get(index) {
                 hash_map.insert(
                     key.to_string(),
                     value_as_string.unwrap_or_else(|_| "NULL".to_string()),
                 );
             }
         } else {
-            if let Some(key) = keys.get(index) {
+            if let Some(key) = column_headers.get(index) {
                 hash_map.insert(key.to_string(), "NULL".to_string());
             }
         }

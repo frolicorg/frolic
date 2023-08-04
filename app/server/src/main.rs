@@ -36,6 +36,7 @@ async fn rest_api(
     // let cache_client = None;
     let response_data = web::block(move || {
         db_utils::execute_query(
+            &json_query,
             &sql_query,
             &sql_connection_pool,
             &memcache_connection_client,
