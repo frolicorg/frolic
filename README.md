@@ -29,7 +29,7 @@ You can also use [frolic-react](https://github.com/frolicorg/frolic-react) for y
 
 You can use a single API endpoint provided by this project to query data for your dashboard. 
 
-For example: 
+Sample API Request: 
 
 ```curl
 curl --location 'http://localhost/api' \
