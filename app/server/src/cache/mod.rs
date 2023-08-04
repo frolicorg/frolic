@@ -55,7 +55,7 @@ pub fn clean_cache_if_needed(cache_client: &Client) {
     //     .into_iter()
     //     .filter_map(|(key, )| key.parse::<String>().ok())
     //     .collect();
-    println!("{}", keys.join(","))
+    // println!("{}", keys.join(","))
     // let curr_items_values: Vec<u64> = stats
     //     .iter()
     //     .filter_map(|(_, stat)| stat.get("curr_items").and_then(|value| value.parse().ok()))
