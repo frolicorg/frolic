@@ -120,7 +120,7 @@ async fn main() -> std::io::Result<()> {
     let cache_client = match memcache::Client::connect("memcache://memcache:11211") {
         Ok(client) => Some(client),
         Err(_) => {
-            eprintln!("Error: Failed to connect to memcache server.");
+            log::error!("Error: Failed to connect to memcache server.");
             None
         }
     };
