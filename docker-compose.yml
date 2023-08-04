@@ -1,5 +1,12 @@
 version: '3'
 services:
+  memcache:
+    build:
+      context: ./app/server        # The build context is the current directory where the Dockerfile exists
+      dockerfile: ./Dockerfile_memcache  # The name of the custom Dockerfile to use
+    container_name: my_memcache_container
+    ports:
+      - "11211:11211"
   backend:
     build:
       context: ./app/server

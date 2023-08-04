@@ -1,0 +1,3 @@
+
+FROM memcached:latest
+

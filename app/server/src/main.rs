@@ -26,7 +26,8 @@ async fn rest_api(
     //     Ok(client) => Some(client),
     //     Err(_) => None,
     // };
-    let cache_client = match memcache::Client::connect("memcache://127.0.0.1:11211?connect_timeout=1") {
+    // {Room for efficiency}
+    let cache_client = match memcache::Client::connect("memcache://127.0.0.1:11211") {
         Ok(client) => Some(client),
         Err(_) => {
             eprintln!("Error: Failed to connect to memcache server.");
@@ -34,6 +35,8 @@ async fn rest_api(
             None
         }
     };
+    // let cache_client = Some(memcache::Client::connect("memcache://127.0.0.1:11211"));
+
     // let cache_client = None;
     let response_data = web::block(move || {
         db_utils::execute_query(
