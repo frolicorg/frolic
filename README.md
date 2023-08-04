@@ -5,9 +5,9 @@
 </a>
 </p>
 
-Frolic is an open source project (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the project and use ready made APIs to query data and create customer facing dashboards. You can also use [frolic-react](https://github.com/frolicorg/frolic-react) for your UI along with frolic to create full stack dashboards much faster.
+Frolic is an open source backend service (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the project and use ready made APIs to query data and create customer facing dashboards. You no longer have to write custom APIs for different dashboard components and create/maintain SQL queries for them.
 
-You no longer have to write custom APIs for different dashboard components and create/maintain SQL queries for them.
+You can also use [frolic-react](https://github.com/frolicorg/frolic-react) for your UI along with frolic to create full stack dashboards much faster.
 
 ![GitHub contributors](https://img.shields.io/github/contributors/FrolicOrg/Frolic)
 [![GitHub issues](https://img.shields.io/github/issues/FrolicOrg/Frolic)](https://github.com/FrolicOrg/Frolic/issues)
