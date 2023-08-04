@@ -1,18 +1,14 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
 use env_logger;
 use log;
-use models::{AppState, DataRequest, DataResponse, Table};
-use mysql::prelude::Queryable;
+use models::{AppState, DataRequest, Table};
 use std::env;
 mod db_utils;
-use db_utils::{
-    add_table_relationship, create_table_schema, fetch_all_tables, fetch_columns_for_table,
-};
+use db_utils::{add_table_relationship, create_table_schema};
 mod cache;
 mod models;
 mod query_engine;
-use memcache::{Client, MemcacheError};
-use std::collections::HashMap;
+use memcache::Client;
 use std::fs::File;
 use std::io::Read;
 
@@ -160,7 +156,6 @@ async fn main() -> std::io::Result<()> {
             }))
             .service(hello)
             .service(echo)
-            // .service(test)
             .service(get_query)
             .service(rest_api)
             .service(fetch_schema)
