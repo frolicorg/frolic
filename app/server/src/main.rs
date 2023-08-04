@@ -117,7 +117,7 @@ async fn main() -> std::io::Result<()> {
     let pool = mysql::Pool::new(builder).unwrap();
     let sql_shared_data = web::Data::new(pool.clone());
 
-    let cache_client = match memcache::Client::connect("memcache://127.0.0.1:11211") {
+    let cache_client = match memcache::Client::connect("memcache://memcache:11211") {
         Ok(client) => Some(client),
         Err(_) => {
             eprintln!("Error: Failed to connect to memcache server.");
