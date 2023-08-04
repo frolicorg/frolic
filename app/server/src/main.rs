@@ -15,7 +15,6 @@ use memcache::{Client, MemcacheError};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use memcache::Client;
 
 #[post("/api")]
 async fn rest_api(
