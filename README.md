@@ -22,8 +22,8 @@ You can also use [frolic-react](https://github.com/frolicorg/frolic-react) for y
 ![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/tooljet/tooljet-ce)
 -->
 
+![Web App Reference Architecture](https://github.com/frolicorg/frolic/assets/15258498/bf399421-3051-4ac2-bb45-0a8b34d63818)
 
-![Web App Reference Architecture-5](https://github.com/arihantparsoya/dashboard-api-layer/assets/15258498/156bdb43-23cf-46d5-a212-9c16f2eab01a)
 
 ## Use single API to query data for all your dashboard components
 
