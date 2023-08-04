@@ -1,7 +1,7 @@
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
 use env_logger;
 use log;
-use models::{AppState, RESTInputModel, ResponseData, Table};
+use models::{AppState, DataRequest, DataResponse, Table};
 use mysql::prelude::Queryable;
 use std::env;
 mod db_utils;
@@ -18,7 +18,7 @@ use std::io::Read;
 
 #[post("/api")]
 async fn rest_api(
-    json_query: web::Json<RESTInputModel>,
+    json_query: web::Json<DataRequest>,
     sql_connection_pool: web::Data<mysql::Pool>,
     memcache_connection_client: web::Data<Option<Client>>,
     app_state: web::Data<AppState>,
@@ -50,7 +50,7 @@ async fn rest_api(
 
 #[post("/get_query")]
 async fn get_query(
-    json_query: web::Json<RESTInputModel>,
+    json_query: web::Json<DataRequest>,
     app_state: web::Data<AppState>,
 ) -> Result<String> {
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);

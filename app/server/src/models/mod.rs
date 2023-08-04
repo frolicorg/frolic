@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct RESTInputModel {
+pub struct DataRequest {
     pub metrics: Option<Vec<Metric>>,
     pub dimensions: Option<Vec<Dimension>>,
     pub filters: Option<Vec<Filter>>,
@@ -30,7 +30,7 @@ pub struct Filter {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ResponseData {
+pub struct DataResponse {
     pub data: Vec<HashMap<String, String>>,
 }
 

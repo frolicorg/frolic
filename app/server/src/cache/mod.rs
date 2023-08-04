@@ -1,20 +1,20 @@
 use crate::models;
+use memcache::Client;
+use models::DataResponse;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, to_string};
 use sha2::{Digest, Sha256};
-use memcache::Client;
-use models::{ResponseData};
 // Function to serialize & deserialize the data output of run_query to JSON
 
-pub fn serialize_data<T: Serialize>(data: &ResponseData) -> Result<String, String> {
+pub fn serialize_data<T: Serialize>(data: &DataResponse) -> Result<String, String> {
     match to_string(data) {
         Ok(serialized) => Ok(serialized),
         Err(err) => Err(format!("Serialization error: {}", err)),
     }
 }
 
-pub fn deserialize_data<T: Deserialize<'static>>(serialized: &str) -> Result<ResponseData, String> {
-    match from_str::<ResponseData>(serialized) {
+pub fn deserialize_data<T: Deserialize<'static>>(serialized: &str) -> Result<DataResponse, String> {
+    match from_str::<DataResponse>(serialized) {
         Ok(deserialized) => Ok(deserialized),
         Err(err) => Err(format!("Deserialization error: {}", err)),
     }

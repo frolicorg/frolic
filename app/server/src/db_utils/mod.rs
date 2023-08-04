@@ -5,7 +5,7 @@ use derive_more::{Display, Error, From};
 use hex;
 use log;
 use memcache::Client;
-use models::{Column, RESTInputModel, ResponseData, Table};
+use models::{Column, DataRequest, DataResponse, Table};
 use mysql::from_value_opt;
 use mysql::prelude::Queryable;
 use serde::{Deserialize, Serialize};
@@ -62,13 +62,13 @@ impl actix_web::ResponseError for PersistenceError {
 }
 
 pub fn execute_query(
-    json_query: &RESTInputModel,
+    json_query: &DataRequest,
     query: &String,
     sql_connection_pool: &mysql::Pool,
     cache_client: &Option<Client>,
     is_caching: &bool,
     caching_expiry: &u32,
-) -> Result<ResponseData, PersistenceError> {
+) -> Result<DataResponse, PersistenceError> {
     // Check if the result is already in the cache
     let cache_key = format!("{}", hash_query_to_unique_id(query));
 
@@ -77,7 +77,7 @@ pub fn execute_query(
         if let Some(client) = cache_client {
             if let Ok(cached_result) = client.get::<String>(&cache_key) {
                 if let Some(result) = cached_result {
-                    match deserialize_data::<ResponseData>(&result) {
+                    match deserialize_data::<DataResponse>(&result) {
                         Ok(response) => return Ok(response),
                         Err(err) => log::info!("DeSerialization failed: {}", err),
                     }
@@ -113,19 +113,19 @@ fn run_query(
     column_headers: &Vec<String>,
     query: &String,
     conn: &mut mysql::PooledConn,
-) -> mysql::error::Result<ResponseData> {
+) -> mysql::error::Result<DataResponse> {
     log::info!("Executing Query");
 
     let response_data = conn.query_map(query, |row: mysql::Row| {
         sql_row_to_hash_map(column_headers, &row)
     });
 
-    Ok(ResponseData {
+    Ok(DataResponse {
         data: response_data?,
     })
 }
 
-fn get_column_headers(json_query: &RESTInputModel) -> Vec<String> {
+fn get_column_headers(json_query: &DataRequest) -> Vec<String> {
     let mut column_headers: Vec<String> = Vec::new();
 
     if let Some(ref dimensions) = json_query.dimensions {

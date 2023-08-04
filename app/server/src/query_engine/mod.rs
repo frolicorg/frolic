@@ -2,7 +2,7 @@ use crate::models;
 use models::{Dimension, Filter, Metric, Table};
 use std::collections::HashMap;
 
-pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String {
+pub fn get_query(query: &models::DataRequest, tables: &Vec<Table>) -> String {
     let tables_json = serde_json::to_string_pretty(&tables).unwrap();
 
     //get the tables setup
