@@ -1,8 +1,9 @@
-use crate::models;
 use crate::cache;
+use crate::models;
 use actix_web::http::StatusCode;
 use derive_more::{Display, Error, From};
 use hex;
+use log;
 use memcache::Client;
 use models::{Column, RESTInputModel, ResponseData, Table};
 use mysql::from_value_opt;
@@ -13,9 +14,13 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
+
 // use mysql::prelude::*;
-use mysql::{Pool};
-use cache::{serialize_data,deserialize_data,sanitize_query,hash_query_to_unique_id,clean_cache_if_needed};
+use cache::{
+    clean_cache_if_needed, deserialize_data, hash_query_to_unique_id, sanitize_query,
+    serialize_data,
+};
+use mysql::Pool;
 
 const MAX_CACHE_SIZE: usize = 50;
 
@@ -65,16 +70,17 @@ pub fn execute_query(
 ) -> Result<ResponseData, PersistenceError> {
     // Check if the result is already in the cache
     let cache_key = format!("{}", hash_query_to_unique_id(query));
-    println!("Caching : {}",is_caching);
-    if *is_caching{
+
+    log::info!("Caching : {}", is_caching);
+    if *is_caching {
         if let Some(client) = cache_client {
             if let Ok(cached_result) = client.get::<String>(&cache_key) {
                 if let Some(result) = cached_result {
                     match deserialize_data::<ResponseData>(&result) {
                         Ok(response) => return Ok(response),
-                        Err(err) => println!("DeSerialization failed: {}", err),
+                        Err(err) => log::info!("DeSerialization failed: {}", err),
                     }
-                } 
+                }
             }
         }
     }
@@ -84,7 +90,7 @@ pub fn execute_query(
     // Execute the query
     let response = run_query(&query, &mut conn)?;
 
-    if *is_caching{
+    if *is_caching {
         if let Some(client) = cache_client {
             match serialize_data::<String>(&response) {
                 Ok(json) => {
@@ -93,7 +99,7 @@ pub fn execute_query(
                     clean_cache_if_needed(client);
                 }
 
-                Err(err) => println!("Serialization failed: {}", err),
+                Err(err) => log::error!("Serialization failed: {}", err),
             }
         }
     }
@@ -102,25 +108,44 @@ pub fn execute_query(
 }
 
 fn run_query(query: &String, conn: &mut mysql::PooledConn) -> mysql::error::Result<ResponseData> {
-    let mut column_names: Vec<String> = vec![];
+    log::info!("Executing Query");
 
     let response_data = conn.query_map(query, |row: mysql::Row| {
-        if column_names.len() == 0 {
-            // Get the columns of the first row
-            column_names = row
-                .columns_ref()
-                .iter()
-                .map(|c| c.name_str().to_string())
-                .collect();
-        }
-
-        sql_row_to_string_list(&row)
+        sql_row_to_hash_map(
+            &vec![
+                "products.category".to_string(),
+                "products.price".to_string(),
+            ],
+            &row,
+        )
     });
 
     Ok(ResponseData {
-        attributes: column_names,
         data: response_data?,
     })
+}
+
+fn sql_row_to_hash_map(keys: &Vec<String>, row: &mysql::Row) -> HashMap<String, String> {
+    let mut hash_map: HashMap<String, String> = HashMap::new();
+
+    for (index, column) in row.columns_ref().iter().enumerate() {
+        if let Some(Ok(value)) = row.get_opt(index) {
+            let value_as_string = from_value_opt::<String>(value);
+
+            if let Some(key) = keys.get(index) {
+                hash_map.insert(
+                    key.to_string(),
+                    value_as_string.unwrap_or_else(|_| "NULL".to_string()),
+                );
+            }
+        } else {
+            if let Some(key) = keys.get(index) {
+                hash_map.insert(key.to_string(), "NULL".to_string());
+            }
+        }
+    }
+
+    hash_map
 }
 
 fn sql_row_to_string_list(row: &mysql::Row) -> Vec<String> {
@@ -213,9 +238,9 @@ pub fn add_table_relationship(input_file_path: &str, output_file_path: &str) -> 
     for relationship in &relationships {
         let cloned_relationship = relationship.clone();
         if let Err(err) = update_relationship(&output_file_path, cloned_relationship) {
-            eprintln!("Error: {:?}", err);
+            log::error!("Error: {:?}", err);
         } else {
-            println!("Relationship updated/added successfully!");
+            log::info!("Relationship updated/added successfully!");
         }
     }
 }
@@ -236,7 +261,7 @@ pub fn create_table_schema(pool: &Pool, output_file_path: &str) -> () {
                         table_info_list.push(table_info);
                     }
                     Err(err) => {
-                        eprintln!("Error fetching columns for table {}: {:?}", table_name, err)
+                        log::error!("Error fetching columns for table {}: {:?}", table_name, err)
                     }
                 }
             }
@@ -248,8 +273,6 @@ pub fn create_table_schema(pool: &Pool, output_file_path: &str) -> () {
             // Write the JSON string to a file
             std::fs::write(output_file_path, json_string).expect("Error writing to file");
         }
-        Err(err) => eprintln!("Error fetching tables: {:?}", err),
+        Err(err) => log::error!("Error fetching tables: {:?}", err),
     }
 }
-
-

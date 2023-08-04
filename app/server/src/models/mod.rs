@@ -31,8 +31,7 @@ pub struct Filter {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ResponseData {
-    pub attributes: Vec<String>,
-    pub data: Vec<Vec<String>>,
+    pub data: Vec<HashMap<String, String>>,
 }
 
 // #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -62,7 +61,7 @@ pub struct AppState {
     pub app_name: String,
     pub tables: Vec<Table>,
     pub is_caching: bool,
-    pub caching_expiry: u32
+    pub caching_expiry: u32,
 }
 
 impl Table {
@@ -84,12 +83,14 @@ impl Table {
     }
 
     pub fn print_tables(&self) {
-        println!("Table: {}", self.name);
+        log::info!("Table: {}", self.name);
         for relationship in &self.relationships {
             for (child_table, (parent_column, child_column)) in relationship {
-                println!(
+                log::info!(
                     "  -> Child Table: {}, Parent Column: {}, Child Column: {}",
-                    child_table, parent_column, child_column
+                    child_table,
+                    parent_column,
+                    child_column
                 );
             }
         }
