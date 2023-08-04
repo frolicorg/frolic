@@ -5,11 +5,18 @@ services:
       context: ./app/server        # The build context is the current directory where the Dockerfile exists
       dockerfile: ./Dockerfile_memcache  # The name of the custom Dockerfile to use
     container_name: my_memcache_container
-    ports:
-      - "11211:11211"
+    networks:
+      - frolic_network
   backend:
     build:
       context: ./app/server
       dockerfile: ./Dockerfile
     ports:
       - "8080:8080"
+    networks:
+      - frolic_network
+    volumes:
+      - ./app/server:/usr/src/app/server  # Mount the host directory to the container directory
+
+networks:
+  frolic_network:
