@@ -35,21 +35,21 @@ For example:
 curl --location 'http://localhost/api' \
 --header 'Content-Type: application/json' \
 --data '{
-    "metrics": [
+      "metrics": [
         {
-            "field": "orders.subtotal",
-            "aggregate_operator": "count"
+          "field": "products.price",
+          "aggregate_operator": "sum"
         },
         {
-            "field": "orders.total",
-            "aggregate_operator": "sum"
+          "field": "products.price",
+          "aggregate_operator": "count"
         }
-    ],
-    "dimensions": [
+      ],
+      "dimensions": [
         {
-            "field":"products.category"
+          "field": "products.category"
         }
-    ]
+      ]
 }
 '
 ```
@@ -65,26 +65,22 @@ The output of the above request will be as follows:
 ```json
 {
     "data": [
-        [
-            "5061",
-            "446835.9692339897",
-            "Widget"
-        ],
-        [
-            "4784",
-            "404989.686671257",
-            "Gizmo"
-        ],
-        [
-            "4939",
-            "429618.7213845253",
-            "Gadget"
-        ],
-        [
-            "3975",
-            "313761.33664894104",
-            "Doohickey"
-        ]
+        {
+            "products.price": "51",
+            "products.category": "Gizmo"
+        },
+        {
+            "products.category": "Doohickey",
+            "products.price": "42"
+        },
+        {
+            "products.category": "Gadget",
+            "products.price": "53"
+        },
+        {
+            "products.category": "Widget",
+            "products.price": "54"
+        }
     ]
 }
 ```
