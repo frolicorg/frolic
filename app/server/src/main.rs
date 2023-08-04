@@ -25,15 +25,6 @@ async fn rest_api(
 ) -> actix_web::Result<impl Responder> {
     let mut is_caching = app_state.is_caching.clone();
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
-    // let cache_client = match memcache::Client::connect("memcache://127.0.0.1:11211") {
-    //     Ok(client) => Some(client),
-    //     Err(_) => None,
-    // };
-    // {Room for efficiency}
-
-    // let cache_client = Some(memcache::Client::connect("memcache://127.0.0.1:11211"));
-
-    // let cache_client = None;
     let response_data = web::block(move || {
         db_utils::execute_query(
             &json_query,
@@ -58,29 +49,17 @@ async fn get_query(
 }
 
 #[get("/fetch_schema")]
-async fn fetch_schema(
-    // json_query: web::Json<RESTInputModel>,
-    sql_connection_pool: web::Data<mysql::Pool>,
-) -> Result<String> {
-    //import schema directly from connection
+async fn fetch_schema(sql_connection_pool: web::Data<mysql::Pool>) -> Result<String> {
     let output_file_path = "data/table_schema_db.json";
     create_table_schema(&sql_connection_pool, output_file_path);
 
     let input_file_path = "data/relationships.json";
     add_table_relationship(input_file_path, output_file_path);
 
-    // let sql_query = query_engine::get_query(&json_query, &app_state.tables);
     Ok(format!(
         "Note : Please restart the Application so that the changed reflect"
     ))
 }
-
-// #[get("/test")]
-// pub(crate) async fn test(data: web::Data<AppState>) -> actix_web::Result<impl Responder> {
-//     let tables_json = serde_json::to_string_pretty(&data.tables).unwrap();
-//     log::info!("{}", tables_json);
-//     Ok(web::Json({}))
-// }
 
 #[get("/")]
 async fn hello() -> impl Responder {
