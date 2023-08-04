@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct DataRequest {
     pub metrics: Option<Vec<Metric>>,
     pub dimensions: Option<Vec<Dimension>>,
@@ -9,6 +10,7 @@ pub struct DataRequest {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Metric {
     pub field: String,
     pub aggregate_operator: Option<String>,
@@ -16,6 +18,7 @@ pub struct Metric {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Dimension {
     pub field: String,
     pub transformation: Option<String>,
@@ -23,6 +26,7 @@ pub struct Dimension {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Filter {
     pub dimension: Dimension,
     pub filter_operator: String,
@@ -30,6 +34,7 @@ pub struct Filter {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct DataResponse {
     pub data: Vec<HashMap<String, String>>,
 }
