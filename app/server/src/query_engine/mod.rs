@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String {
     let tables_json = serde_json::to_string_pretty(&tables).unwrap();
-    // log::info!("{}", tables_json);
 
     //get the tables setup
     let tables: Vec<Table> = tables.iter().cloned().collect();
@@ -20,23 +19,19 @@ pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String 
 
     if let Some(metrics) = &query.metrics {
         metrics_sql = metrics_to_sql(metrics);
-        // println!("{}",metrics_sql);
-        metric_fields = metrics
-            .iter()
-            .map(|metric| metric.field.clone())
-            .collect();
+        metric_fields = metrics.iter().map(|metric| metric.field.clone()).collect();
         all_fields.extend(metric_fields);
     };
     if let Some(dimensions) = &query.dimensions {
-        dimensions_sql = dimensions_to_sql(dimensions,false);
-        dimensions_group_sql = "group by ".to_string() + &dimensions_to_sql(dimensions,true);
+        dimensions_sql = dimensions_to_sql(dimensions, false);
+        dimensions_group_sql = "group by ".to_string() + &dimensions_to_sql(dimensions, true);
         dimension_fields = dimensions
             .iter()
             .map(|dimension| dimension.field.clone())
             .collect();
         all_fields.extend(dimension_fields);
     };
-    
+
     if let Some(filters) = &query.filters {
         filter_fields = filters
             .iter()
@@ -47,18 +42,18 @@ pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String 
 
     //check if the columns are present in the tables or not, if present create a hashmap as well to get the datatype
     let mut field_datatype_map: HashMap<&String, &str> = HashMap::new();
-    for field in &all_fields{
+    for field in &all_fields {
         match find_column_datatype(&tables, field) {
             Some(datatype) => {
-                println!("Column datatype: {}", datatype);
+                log::info!("Column datatype: {}", datatype);
                 field_datatype_map.insert(field, datatype);
             }
-            None => return format!("Column : {} not found or invald input format",field)
+            None => return format!("Column : {} not found or invald input format", field),
         }
     }
-    
+
     let filters_sql = if let Some(filters) = &query.filters {
-        filters_to_sql(filters,&field_datatype_map)
+        filters_to_sql(filters, &field_datatype_map)
     } else {
         String::new()
     };
@@ -68,19 +63,20 @@ pub fn get_query(query: &models::RESTInputModel, tables: &Vec<Table>) -> String 
 
     //generate final mysql query
     let mut comma = String::new();
-    if dimensions_sql != "" && metrics_sql != ""{
+    if dimensions_sql != "" && metrics_sql != "" {
         comma = ",".to_string();
     }
     format!(
         "select {} {} {} from {} {} {} ;",
-        dimensions_sql,comma, metrics_sql, table_sql, filters_sql, dimensions_group_sql
+        dimensions_sql, comma, metrics_sql, table_sql, filters_sql, dimensions_group_sql
     )
 }
 
 //this function takes required tables and registered tables and provide the joined table
 pub fn handle_required_table(
     registered_table: Vec<Table>,
-    required_table_names: Vec<String>,) -> String {
+    required_table_names: Vec<String>,
+) -> String {
     //from the tables vector filter the required tables to join
 
     //check if required tables are registered or not
@@ -100,11 +96,6 @@ pub fn handle_required_table(
         .filter(|table| required_table_names.contains(&table.name))
         .cloned()
         .collect();
-    for table in &table_needed {
-        table.print_tables();
-        println!();
-    }
-    // "hello".to_string()
 
     if let Some(query) = generate_join_query(&table_needed) {
         query
@@ -136,21 +127,20 @@ pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
             Some(operator) => {
                 let uppercase_aggregate = operator.to_uppercase();
                 let aggregate_str = operator.as_str();
-                println!("{}", aggregate_str);
 
                 if valid_aggregations.contains(&aggregate_str) {
-                    let column_sql = match &metric.name{
-                        Some(nm)=>{
-                            format!("{}({}) as {}", uppercase_aggregate,&metric.field, nm)
+                    let column_sql = match &metric.name {
+                        Some(nm) => {
+                            format!("{}({}) as {}", uppercase_aggregate, &metric.field, nm)
                         }
-                        None =>{
+                        None => {
                             format!("{}({})", uppercase_aggregate, &metric.field)
                         }
                     };
 
                     sql_columns.push(column_sql);
                 } else {
-                    eprintln!("Unknown aggregation function for column '{}'", metric.field);
+                    log::info!("Unknown aggregation function for column '{}'", metric.field);
                 }
             }
             None => {
@@ -162,7 +152,7 @@ pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
     sql_columns.join(", ")
 }
 
-pub fn dimensions_to_sql(dimensions: &Vec<Dimension>,group:bool) -> String {
+pub fn dimensions_to_sql(dimensions: &Vec<Dimension>, group: bool) -> String {
     let mut sql_columns = Vec::new();
     let valid_transformations = ["year", "month"];
     for dimension in dimensions {
@@ -171,23 +161,24 @@ pub fn dimensions_to_sql(dimensions: &Vec<Dimension>,group:bool) -> String {
                 let uppercase_transformation = operator.to_uppercase();
                 let transformation_str = operator.as_str();
                 if valid_transformations.contains(&transformation_str) {
-
-                    let column_sql = match &dimension.name{
-                        Some(nm)=>{
-                            if group{
-                                format!("{}({})", uppercase_transformation,&dimension.field)
-                            }
-                            else{
-                                format!("{}({}) as {}", uppercase_transformation,&dimension.field, nm)
+                    let column_sql = match &dimension.name {
+                        Some(nm) => {
+                            if group {
+                                format!("{}({})", uppercase_transformation, &dimension.field)
+                            } else {
+                                format!(
+                                    "{}({}) as {}",
+                                    uppercase_transformation, &dimension.field, nm
+                                )
                             }
                         }
-                        None =>{
+                        None => {
                             format!("{}({})", uppercase_transformation, &dimension.field)
                         }
                     };
                     sql_columns.push(column_sql);
                 } else {
-                    eprintln!(
+                    log::info!(
                         "Unknown aggregation function for column '{}'",
                         dimension.field
                     );
@@ -202,7 +193,10 @@ pub fn dimensions_to_sql(dimensions: &Vec<Dimension>,group:bool) -> String {
     sql_columns.join(", ")
 }
 
-pub fn filters_to_sql(filters: &Vec<Filter>,field_datatype_map: &HashMap<&String, &str>) -> String {
+pub fn filters_to_sql(
+    filters: &Vec<Filter>,
+    field_datatype_map: &HashMap<&String, &str>,
+) -> String {
     let mut sql_filters = Vec::new();
     let valid_operators = [">", "<", "="];
     for filter in filters {
@@ -218,18 +212,16 @@ pub fn filters_to_sql(filters: &Vec<Filter>,field_datatype_map: &HashMap<&String
         //     _ => panic!("Unsupported datatype"), // Add appropriate handling for other datatypes if needed
         // };
         if valid_operators.contains(&filter.filter_operator.as_str()) {
-
-
-            let filter_sql = match datatype_field.as_str(){
+            let filter_sql = match datatype_field.as_str() {
                 "varchar" | "datetime" => format!(
                     "{} {} \"{}\"",
-                    dimensions_to_sql(&vec![filter.dimension.clone()],true),
+                    dimensions_to_sql(&vec![filter.dimension.clone()], true),
                     filter.filter_operator.to_uppercase(),
                     filter.filter_value
                 ),
                 "int" | "bigint" | "float" => format!(
                     "{} {} {}",
-                    dimensions_to_sql(&vec![filter.dimension.clone()],true),
+                    dimensions_to_sql(&vec![filter.dimension.clone()], true),
                     filter.filter_operator.to_uppercase(),
                     filter.filter_value
                 ),
@@ -238,13 +230,13 @@ pub fn filters_to_sql(filters: &Vec<Filter>,field_datatype_map: &HashMap<&String
 
             sql_filters.push(filter_sql)
         } else {
-            eprintln!(
+            log::info!(
                 "Unknown filter operator for column '{}'",
                 filter.dimension.field
             );
         }
     }
-    format!("where {}",sql_filters.join(" and "))
+    format!("where {}", sql_filters.join(" and "))
 }
 
 fn find_relationship<'a>(
@@ -289,7 +281,7 @@ fn generate_join_query(tables: &[Table]) -> Option<String> {
         }
 
         if !join_found {
-            println!("{} No Relationship Found", i);
+            log::info!("{} No Relationship Found", i);
             // If no relationship exists, return None or handle accordingly.
             return None;
         }
@@ -297,7 +289,6 @@ fn generate_join_query(tables: &[Table]) -> Option<String> {
 
     Some(query)
 }
-
 
 pub fn find_column_datatype<'a>(tables: &'a [Table], column_name: &'a str) -> Option<&'a str> {
     // Split the input string into table name and column name
