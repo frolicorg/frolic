@@ -12,12 +12,13 @@ mod cache;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use memcache::{Client, MemcacheError};
+use memcache::Client;
 
 #[post("/api")]
 async fn rest_api(
     json_query: web::Json<RESTInputModel>,
     sql_connection_pool: web::Data<mysql::Pool>,
+    memcache_connection_client: web::Data<Option<Client>>,
     app_state: web::Data<AppState>,
 ) -> actix_web::Result<impl Responder> {
     let mut is_caching = app_state.is_caching.clone();
@@ -27,14 +28,7 @@ async fn rest_api(
     //     Err(_) => None,
     // };
     // {Room for efficiency}
-    let cache_client = match memcache::Client::connect("memcache://memcache:11211") {
-        Ok(client) => Some(client),
-        Err(_) => {
-            eprintln!("Error: Failed to connect to memcache server.");
-            is_caching = false;
-            None
-        }
-    };
+
     // let cache_client = Some(memcache::Client::connect("memcache://127.0.0.1:11211"));
 
     // let cache_client = None;
@@ -42,7 +36,7 @@ async fn rest_api(
         db_utils::execute_query(
             &sql_query,
             &sql_connection_pool,
-            &cache_client,
+            &memcache_connection_client,
             &is_caching,
             &app_state.caching_expiry,
         )
@@ -143,6 +137,15 @@ async fn main() -> std::io::Result<()> {
     let pool = mysql::Pool::new(builder).unwrap();
     let sql_shared_data = web::Data::new(pool.clone());
 
+    let cache_client = match memcache::Client::connect("memcache://127.0.0.1:11211") {
+        Ok(client) => Some(client),
+        Err(_) => {
+            eprintln!("Error: Failed to connect to memcache server.");
+            None
+        }
+    };
+    // let memcache_shared_data = cache_client.clone();
+    let memcache_connection_client = web::Data::new(cache_client);
     log::info!("importing table schema");
     
     //import tabled from schema file
@@ -163,6 +166,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(sql_shared_data.clone())
+            .app_data(memcache_connection_client.clone())
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Actix Web"),
                 tables: tables.clone(),
