@@ -18,7 +18,7 @@ pub struct Metric {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Dimension {
     pub field: String,
-    pub transformations: Option<String>,
+    pub transformation: Option<String>,
     pub name: Option<String>,
 }
 

@@ -156,7 +156,7 @@ pub fn dimensions_to_sql(dimensions: &Vec<Dimension>, group: bool) -> String {
     let mut sql_columns = Vec::new();
     let valid_transformations = ["year", "month"];
     for dimension in dimensions {
-        match &dimension.transformations {
+        match &dimension.transformation {
             Some(operator) => {
                 let uppercase_transformation = operator.to_uppercase();
                 let transformation_str = operator.as_str();
