@@ -105,6 +105,7 @@ You can start using the docker container path to query your data.
 * Single API for all your dashboard requirements
 * Automatically generates and execute SQL queries on your database
 * Automatically handles complex table relationships
+* Request Caching
 
 ## Integrations
 
