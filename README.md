@@ -5,7 +5,7 @@
 </a>
 </p>
 
-Frolic is an open source backend service (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the project and use ready made APIs to query data and create customer facing dashboards. You no longer have to write custom APIs for different dashboard components and create/maintain SQL queries for them.
+Frolic is an open source backend service (written in Rust) to build customer facing dashboards 10x faster. You can directly connect your database to the project and use ready made APIs to query data. You no longer have to write custom APIs for different dashboard components and create/maintain SQL queries for them.
 
 You can also use [frolic-react](https://github.com/frolicorg/frolic-react) for your UI along with frolic to create full stack dashboards much faster.
 
@@ -22,14 +22,14 @@ You can also use [frolic-react](https://github.com/frolicorg/frolic-react) for y
 ![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/tooljet/tooljet-ce)
 -->
 
+![Web App Reference Architecture](https://github.com/frolicorg/frolic/assets/15258498/bf399421-3051-4ac2-bb45-0a8b34d63818)
 
-![Web App Reference Architecture-5](https://github.com/arihantparsoya/dashboard-api-layer/assets/15258498/156bdb43-23cf-46d5-a212-9c16f2eab01a)
 
 ## Use single API to query data for all your dashboard components
 
 You can use a single API endpoint provided by this project to query data for your dashboard. 
 
-For example: 
+Sample API Request: 
 
 ```curl
 curl --location 'http://localhost/api' \
@@ -58,7 +58,7 @@ You can pass the metrics you require in the `metrics` field as an array. The `fi
 
 The `dimensions` field allows you to categorize the metrics returned by the API. To specify the column by which you want to categorize the `metrics`, use the `field` operator and specify the column name in `<table_name>.<column_name>` format.
 
-The data returned by the API will be a list of array. The array will contain the metric values and the dimension by which they are categorized.
+The data returned by the API will be a list of JSON which contains the dimensions and the attributes specified in the request.
 
 The output of the above request will be as follows:
 
@@ -105,6 +105,7 @@ You can start using the docker container path to query your data.
 * Single API for all your dashboard requirements
 * Automatically generates and execute SQL queries on your database
 * Automatically handles complex table relationships
+* Caching of API Calls (using [memcached](https://memcached.org))
 
 ## Integrations
 
