@@ -4,6 +4,7 @@ use log;
 use models::{AppState, DataRequest, Table};
 use std::env;
 mod db_utils;
+mod config;
 use db_utils::{add_table_relationship, create_table_schema};
 mod cache;
 mod models;
@@ -11,6 +12,7 @@ mod query_engine;
 use memcache::Client;
 use std::fs::File;
 use std::io::Read;
+use crate::config::AppConfig;
 
 #[post("/api")]
 async fn rest_api(
@@ -42,19 +44,6 @@ async fn get_query(
 ) -> Result<String> {
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
     Ok(format!("SQL:\n{}!", sql_query))
-}
-
-#[get("/fetch_schema")]
-async fn fetch_schema(sql_connection_pool: web::Data<mysql::Pool>) -> Result<String> {
-    let output_file_path = "data/table_schema_db.json";
-    create_table_schema(&sql_connection_pool, output_file_path);
-
-    let input_file_path = "data/relationships.json";
-    add_table_relationship(input_file_path, output_file_path);
-
-    Ok(format!(
-        "Note : Please restart the Application so that the changed reflect"
-    ))
 }
 
 #[get("/")]
@@ -102,35 +91,44 @@ async fn main() -> std::io::Result<()> {
     // initialize logger
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    log::info!("setting up app from environment");
+    log::info!("setting up app configurations");
 
-    let db_user = env::var("MYSQL_USER").expect("MYSQL_USER is not set in .env file");
-    let db_password = env::var("MYSQL_PASSWORD").expect("MYSQL_PASSWORD is not set in .env file");
-    let db_host = env::var("MYSQL_HOST").expect("MYSQL_HOST is not set in .env file");
-    let db_port = env::var("MYSQL_PORT").expect("MYSQL_PORT is not set in .env file");
-    let db_name = env::var("MYSQL_DBNAME").expect("MYSQL_DBNAME is not set in .env file");
-    let db_port = db_port.parse().unwrap();
-
+    
+    // read the configurations
+    let config = config::read_config_file("config.ini").expect("Error reading the configuration file.");  
+    
+    //setup database connection
+    let db_user = config.database.db_user;
+    let db_password = config.database.db_password;
+    let db_host = config.database.db_host;
+    let db_name = config.database.db_name;
+    let db_port = config.database.db_port;
     let builder = get_conn_builder(db_user, db_password, db_host, db_port, db_name);
 
     log::info!("initializing database connection");
     let pool = mysql::Pool::new(builder).unwrap();
     let sql_shared_data = web::Data::new(pool.clone());
-
-    let cache_client = match memcache::Client::connect("memcache://memcache:11211") {
+    
+    //setup cache server client
+    let cache_server = "memcache://".to_string() + &config.caching.cache_host.to_string() + ":11211";
+    println!("{}",cache_server);
+    let cache_client = match memcache::Client::connect(cache_server) {
         Ok(client) => Some(client),
         Err(_) => {
             log::error!("Error: Failed to connect to memcache server.");
             None
         }
     };
-    // let memcache_shared_data = cache_client.clone();
+    let memcache_shared_data = cache_client.clone();
     let memcache_connection_client = web::Data::new(cache_client);
-    log::info!("importing table schema");
 
-    //import tabled from schema file
-    let output_file_path = "data/table_schema_db.json";
-    let tables = match read_tables_from_file(&output_file_path) {
+    //fetch the schema from the database
+
+    log::info!("importing table schema");
+    if (config.other.fetch_schema == true){
+        db_utils::fetch_schema(&pool.clone(),config.other.relationship_file.clone(),config.other.schema_file.clone());
+    }
+    let tables = match read_tables_from_file(&config.other.schema_file) {
         Ok(tables) => tables,
         Err(err) => {
             log::error!("{}", err);
@@ -138,11 +136,6 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-    let is_caching = true;
-    let caching_expiry = 3600;
-
-    // let tables_json = serde_json::to_string_pretty(&tables).unwrap();
-    // log::info!("{}", tables_json);
 
     HttpServer::new(move || {
         App::new()
@@ -151,14 +144,14 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Actix Web"),
                 tables: tables.clone(),
-                is_caching: is_caching.clone(),
-                caching_expiry: caching_expiry.clone(),
+                is_caching: config.caching.cache_enabled.clone(),
+                caching_expiry: config.caching.cache_expiry.clone(),
             }))
             .service(hello)
             .service(echo)
             .service(get_query)
             .service(rest_api)
-            .service(fetch_schema)
+            // .service(fetch_schema)
     })
     .bind(("0.0.0.0", 8080))?
     .run()

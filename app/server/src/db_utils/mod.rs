@@ -302,3 +302,12 @@ pub fn create_table_schema(pool: &Pool, output_file_path: &str) -> () {
         Err(err) => log::error!("Error fetching tables: {:?}", err),
     }
 }
+
+pub fn fetch_schema(sql_connection_pool: &mysql::Pool, relationship_file: String, schema_file: String) -> String {
+    create_table_schema(&sql_connection_pool, &schema_file);
+    add_table_relationship(&relationship_file, &schema_file);
+    format!(
+        "Note : Please restart the Application so that the changed reflect"
+    )
+    // Ok()
+}
