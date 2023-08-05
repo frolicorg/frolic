@@ -39,10 +39,6 @@ curl --location 'http://localhost/api' \
         {
           "field": "products.price",
           "aggregate_operator": "sum"
-        },
-        {
-          "field": "products.price",
-          "aggregate_operator": "count"
         }
       ],
       "dimensions": [
