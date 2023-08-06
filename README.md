@@ -84,7 +84,7 @@ The output of the above request will be as follows:
 ## Running Project
 
 ### 1. Add your MySQL database credentials
-Enter your MySQL database credentials in the [.env](https://github.com/arihantparsoya/dashboard-api-layer/blob/prod/app/server/.env) file.
+Enter your MySQL database credentials in the [config.ini](https://github.com/arihantparsoya/dashboard-api-layer/blob/prod/app/server/config.ini) file.
 
 ### 2. Run the Project
 
