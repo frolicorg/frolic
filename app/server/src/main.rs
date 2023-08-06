@@ -88,22 +88,22 @@ fn read_tables_from_file(file_path: &str) -> Result<Vec<Table>, Box<dyn std::err
     Ok(tables)
 }
 
-async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
-    let config = req
-        .app_data::<Config>()
-        .map(|data| data.get_ref().clone())
-        .unwrap_or_else(Default::default);
-    match auth::validate_token(credentials.token()) {
-        Ok(res) => {
-            if res == true {
-                Ok(req)
-            } else {
-                Err(AuthenticationError::from(config).into())
-            }
-        }
-        Err(_) => Err(AuthenticationError::from(config).into()),
-    }
-}
+// async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+//     let config = req
+//         .app_data::<Config>()
+//         .map(|data| data.get_ref().clone())
+//         .unwrap_or_else(Default::default);
+//     match auth::validate_token(credentials.token()) {
+//         Ok(res) => {
+//             if res == true {
+//                 Ok(req)
+//             } else {
+//                 Err(AuthenticationError::from(config).into())
+//             }
+//         }
+//         Err(_) => Err(AuthenticationError::from(config).into()),
+//     }
+// }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
