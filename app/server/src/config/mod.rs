@@ -15,6 +15,7 @@ pub struct AppConfig {
 // Database configurations
 #[derive(Deserialize)]
 pub struct DatabaseConfig {
+    pub db_type: String,
     pub db_host: String,
     pub db_port: u16,
     pub db_name: String,

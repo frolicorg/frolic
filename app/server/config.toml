@@ -2,6 +2,7 @@
 
 # Database Configuration
 [database]
+db_type = "mysql"
 db_host = "thinkbricks-db.ct00o317q97i.us-east-1.rds.amazonaws.com"
 db_port = 3306
 db_name = "ecommerce_sample"
