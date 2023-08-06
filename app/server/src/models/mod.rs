@@ -7,6 +7,8 @@ pub struct DataRequest {
     pub metrics: Option<Vec<Metric>>,
     pub dimensions: Option<Vec<Dimension>>,
     pub filters: Option<Vec<Filter>>,
+    pub orderby: Option<OrderBy>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -15,6 +17,13 @@ pub struct Metric {
     pub field: String,
     pub aggregate_operator: Option<String>,
     pub name: Option<String>,
+    pub distinct : Option<bool>,
+}
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct OrderBy {
+    pub field: Vec<String>,
+    pub order: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

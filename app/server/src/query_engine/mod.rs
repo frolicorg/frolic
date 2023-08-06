@@ -12,10 +12,12 @@ pub fn get_query(query: &models::DataRequest, tables: &Vec<Table>) -> String {
     let mut filter_fields = Vec::new();
     let mut metric_fields = Vec::new();
     let mut dimension_fields = Vec::new();
+    let mut order_fields = Vec::new();
     let mut all_fields: Vec<String> = Vec::new();
     let mut metrics_sql = String::new();
     let mut dimensions_sql = String::new();
     let mut dimensions_group_sql = String::new();
+    let mut order_sql = String::new();
 
     if let Some(metrics) = &query.metrics {
         metrics_sql = metrics_to_sql(metrics);
@@ -39,7 +41,12 @@ pub fn get_query(query: &models::DataRequest, tables: &Vec<Table>) -> String {
             .collect();
         all_fields.extend(filter_fields);
     };
-
+    if let Some(order) = &query.orderby{
+        order_fields = order.field.clone();
+        order_sql = format!("order by {} {}",order_fields.join(","),order.order);
+        //not validating the columns of order by field (we can do that once we start using the name provided for validation)
+        // all_fields.extend(order_fields);
+    }
     //check if the columns are present in the tables or not, if present create a hashmap as well to get the datatype
     let mut field_datatype_map: HashMap<&String, &str> = HashMap::new();
     for field in &all_fields {
@@ -62,6 +69,13 @@ pub fn get_query(query: &models::DataRequest, tables: &Vec<Table>) -> String {
     } else {
         String::new()
     };
+
+    let limit_sql = if let Some(limit) = &query.limit{
+        format!("limit {}",limit) 
+    }
+    else{
+        String::new()   
+    };
     //get all the table names requested by the user & process them
     let required_table_names = extract_table_columns(all_fields);
     let table_sql = handle_required_table(tables, required_table_names);
@@ -72,8 +86,8 @@ pub fn get_query(query: &models::DataRequest, tables: &Vec<Table>) -> String {
         comma = ",".to_string();
     }
     format!(
-        "select {} {} {} from {} {} {} ;",
-        dimensions_sql, comma, metrics_sql, table_sql, filters_sql, dimensions_group_sql
+        "select {} {} {} from {} {} {} {} {} ;",
+        dimensions_sql, comma, metrics_sql, table_sql, filters_sql, dimensions_group_sql,order_sql,limit_sql
     )
 }
 
@@ -128,18 +142,22 @@ pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
     let valid_aggregations = ["sum", "avg", "count", "max", "min"];
 
     for metric in metrics {
+        let distinct = metric.distinct.map(|dist| if dist { "DISTINCT".to_string() } else { String::new() }).unwrap_or(String::new());
+        
         match &metric.aggregate_operator {
             Some(operator) => {
                 let uppercase_aggregate = operator.to_uppercase();
                 let aggregate_str = operator.as_str();
 
                 if valid_aggregations.contains(&aggregate_str) {
+                    let aggregate_str_without_underscore = uppercase_aggregate.replace("_", " ");
                     let column_sql = match &metric.name {
+                        
                         Some(nm) => {
-                            format!("{}({}) as {}", uppercase_aggregate, &metric.field, nm)
+                            format!("{}({}({})) as {}", aggregate_str_without_underscore,distinct, &metric.field, nm)
                         }
                         None => {
-                            format!("{}({})", uppercase_aggregate, &metric.field)
+                            format!("{}({}({}))", aggregate_str_without_underscore,distinct, &metric.field)
                         }
                     };
 
