@@ -159,7 +159,7 @@ pub fn metrics_to_sql(metrics: &Vec<Metric>) -> String {
 
 pub fn dimensions_to_sql(dimensions: &Vec<Dimension>, group: bool) -> String {
     let mut sql_columns = Vec::new();
-    let valid_transformations = ["year", "month"];
+    let valid_transformations = ["year", "month","date"];
     for dimension in dimensions {
         match &dimension.transformation {
             Some(operator) => {
