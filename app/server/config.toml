@@ -14,7 +14,7 @@ db_password = "password"
 cache_enabled = true
 cache_expiry = 3600
 cache_type = "memcached"
-cache_host = "localhost"
+cache_host = "memcache"
 cache_port = 11211
 
 # Other Parameters
