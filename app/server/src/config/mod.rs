@@ -1,4 +1,3 @@
-
 use serde_derive::Deserialize;
 use std::fs;
 use std::process::exit;
@@ -10,6 +9,7 @@ pub struct AppConfig {
     pub database: DatabaseConfig,
     pub caching: CachingConfig,
     pub schema: SchemaConfig,
+    pub authentication: OpenIDAuthentication,
 }
 
 // Database configurations
@@ -41,11 +41,14 @@ pub struct SchemaConfig {
     pub schema_file: String,
 }
 
-
+#[derive(Deserialize)]
+pub struct OpenIDAuthentication {
+    pub authenticate: bool,
+    pub authority: String,
+}
 
 // Function to read the configurations from the INI file
 pub fn read_config_file(file_path: &str) -> Result<AppConfig, Box<dyn std::error::Error>> {
-
     let contents = match fs::read_to_string(file_path) {
         // If successful return the files text as `contents`.
         // `c` is a local variable.
@@ -92,7 +95,6 @@ pub fn read_config_file(file_path: &str) -> Result<AppConfig, Box<dyn std::error
     // let relationship_file = schema.get("relationship_file").unwrap_or("data/relationships.json");
     // let schmea_file = schema.get("schema_file").unwrap_or("data/table_schema_db.json");
 
-
     // // Create and return the AppConfig struct
     // let app_config = AppConfig {
     //     database: DatabaseConfig {
@@ -118,5 +120,3 @@ pub fn read_config_file(file_path: &str) -> Result<AppConfig, Box<dyn std::error
 
     Ok(app_config)
 }
-
-

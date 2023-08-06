@@ -22,3 +22,8 @@ cache_port = 11211
 fetch_schema = true
 relationship_file = "data/relationships.json"
 schema_file = "data/table_schema_db.json"
+
+# Caching Configuration
+[authentication]
+authenticate = true
+authority = ""

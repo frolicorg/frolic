@@ -119,9 +119,9 @@ async fn main() -> std::io::Result<()> {
     let config =
         config::read_config_file("config.toml").expect("Error reading the configuration file.");
 
-    //setup database connection
+    // setup database connection
     let db_type = config.database.db_type;
-    if db_type != "mysql"{
+    if db_type != "mysql" {
         panic!("This database is not supported.");
     };
     let db_user = config.database.db_user;
@@ -138,7 +138,8 @@ async fn main() -> std::io::Result<()> {
     //setup cache server client
     let cache_server =
         "memcache://".to_string() + &config.caching.cache_host.to_string() + ":11211";
-    println!("{}", cache_server);
+    log::info!("{}", cache_server);
+
     let cache_client = match memcache::Client::connect(cache_server) {
         Ok(client) => Some(client),
         Err(_) => {
@@ -146,12 +147,13 @@ async fn main() -> std::io::Result<()> {
             None
         }
     };
+
     let memcache_shared_data = cache_client.clone();
     let memcache_connection_client = web::Data::new(cache_client);
 
     //fetch the schema from the database
 
-    log::info!("importing table schema");
+    log::info!("Importing table schema");
     if (config.schema.fetch_schema == true) {
         db_utils::fetch_schema(
             &pool.clone(),
