@@ -22,7 +22,7 @@ You can also use [frolic-react](https://github.com/frolicorg/frolic-react) for y
 ![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/tooljet/tooljet-ce)
 -->
 
-![Web App Reference Architecture](https://github.com/frolicorg/frolic/assets/15258498/bf399421-3051-4ac2-bb45-0a8b34d63818)
+![Web App Reference Architecture-2](https://github.com/frolicorg/frolic/assets/15258498/9c0d540e-fdd5-4968-8c6e-ff41a655c873)
 
 
 ## Use single API to query data for all your dashboard components
@@ -39,10 +39,6 @@ curl --location 'http://localhost/api' \
         {
           "field": "products.price",
           "aggregate_operator": "sum"
-        },
-        {
-          "field": "products.price",
-          "aggregate_operator": "count"
         }
       ],
       "dimensions": [
@@ -88,7 +84,7 @@ The output of the above request will be as follows:
 ## Running Project
 
 ### 1. Add your MySQL database credentials
-Enter your MySQL database credentials in the [.env](https://github.com/arihantparsoya/dashboard-api-layer/blob/prod/app/server/.env) file.
+Enter your MySQL database credentials in the [config.ini](https://github.com/arihantparsoya/dashboard-api-layer/blob/prod/app/server/config.ini) file.
 
 ### 2. Run the Project
 
