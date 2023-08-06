@@ -73,6 +73,7 @@ pub fn read_config_file(file_path: &str) -> Result<AppConfig, Box<dyn std::error
             exit(1);
         }
     };
+
     // // Load the INI file
     // let ini = Ini::load_from_file(Path::new(file_path))?;
     // // Read the database configurations
