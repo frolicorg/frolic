@@ -15,9 +15,12 @@ use crate::config::AppConfig;
 use actix_web::middleware::Logger;
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
+mod auth;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use memcache::Client;
 use std::fs::File;
 use std::io::Read;
+use std::pin::Pin;
 
 #[post("/api")]
 async fn rest_api(
@@ -88,22 +91,25 @@ fn read_tables_from_file(file_path: &str) -> Result<Vec<Table>, Box<dyn std::err
     Ok(tables)
 }
 
-// async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
-//     let config = req
-//         .app_data::<Config>()
-//         .map(|data| data.get_ref().clone())
-//         .unwrap_or_else(Default::default);
-//     match auth::validate_token(credentials.token()) {
-//         Ok(res) => {
-//             if res == true {
-//                 Ok(req)
-//             } else {
-//                 Err(AuthenticationError::from(config).into())
-//             }
-//         }
-//         Err(_) => Err(AuthenticationError::from(config).into()),
-//     }
-// }
+async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+    log::info!("Middleware");
+
+    let config = req
+        .app_data::<Config>()
+        .map(|data| Pin::new(data).get_ref().clone())
+        .unwrap_or_else(Default::default);
+
+    match auth::validate_token(credentials.token()) {
+        Ok(res) => {
+            if res == true {
+                Ok(req)
+            } else {
+                Err(AuthenticationError::from(config).into())
+            }
+        }
+        Err(_) => Err(AuthenticationError::from(config).into()),
+    }
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -119,9 +125,9 @@ async fn main() -> std::io::Result<()> {
     let config =
         config::read_config_file("config.toml").expect("Error reading the configuration file.");
 
-    //setup database connection
+    // setup database connection
     let db_type = config.database.db_type;
-    if db_type != "mysql"{
+    if db_type != "mysql" {
         panic!("This database is not supported.");
     };
     let db_user = config.database.db_user;
@@ -138,7 +144,8 @@ async fn main() -> std::io::Result<()> {
     //setup cache server client
     let cache_server =
         "memcache://".to_string() + &config.caching.cache_host.to_string() + ":11211";
-    println!("{}", cache_server);
+    log::info!("{}", cache_server);
+
     let cache_client = match memcache::Client::connect(cache_server) {
         Ok(client) => Some(client),
         Err(_) => {
@@ -146,12 +153,11 @@ async fn main() -> std::io::Result<()> {
             None
         }
     };
+
     let memcache_shared_data = cache_client.clone();
     let memcache_connection_client = web::Data::new(cache_client);
 
-    //fetch the schema from the database
-
-    log::info!("importing table schema");
+    log::info!("Importing table schema");
     if (config.schema.fetch_schema == true) {
         db_utils::fetch_schema(
             &pool.clone(),
@@ -159,6 +165,7 @@ async fn main() -> std::io::Result<()> {
             config.schema.schema_file.clone(),
         );
     }
+
     let tables = match read_tables_from_file(&config.schema.schema_file) {
         Ok(tables) => tables,
         Err(err) => {
@@ -167,10 +174,15 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
+    log::info!("Configuring authentication");
+    log::info!("{}", config.authentication.authority);
+    // let auth = HttpAuthentication::bearer(validator);
+
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
             .wrap(Logger::new("%a %{User-Agent}i"))
+            // .wrap(auth)
             .app_data(sql_shared_data.clone())
             .app_data(memcache_connection_client.clone())
             .app_data(web::Data::new(AppState {

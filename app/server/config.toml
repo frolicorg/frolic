@@ -14,7 +14,7 @@ db_password = "password"
 cache_enabled = true
 cache_expiry = 3600
 cache_type = "memcached"
-cache_host = "memcache"
+cache_host = "localhost"
 cache_port = 11211
 
 # Other Parameters
@@ -22,3 +22,8 @@ cache_port = 11211
 fetch_schema = true
 relationship_file = "data/relationships.json"
 schema_file = "data/table_schema_db.json"
+
+# Caching Configuration
+[authentication]
+authenticate = true
+authority = ""
