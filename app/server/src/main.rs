@@ -120,6 +120,10 @@ async fn main() -> std::io::Result<()> {
         config::read_config_file("config.toml").expect("Error reading the configuration file.");
 
     //setup database connection
+    let db_type = config.database.db_type;
+    if db_type != "mysql"{
+        panic!("This database is not supported.");
+    };
     let db_user = config.database.db_user;
     let db_password = config.database.db_password;
     let db_host = config.database.db_host;
