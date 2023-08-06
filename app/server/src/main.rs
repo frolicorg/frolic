@@ -1,18 +1,23 @@
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
+use actix_web::{
+    dev::ServiceRequest, get, post, web, App, Error, HttpResponse, HttpServer, Responder, Result,
+};
 use env_logger;
 use log;
 use models::{AppState, DataRequest, Table};
 use std::env;
-mod db_utils;
 mod config;
+mod db_utils;
 use db_utils::{add_table_relationship, create_table_schema};
 mod cache;
 mod models;
 mod query_engine;
+use crate::config::AppConfig;
+use actix_web::middleware::Logger;
+use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
+use actix_web_httpauth::extractors::AuthenticationError;
 use memcache::Client;
 use std::fs::File;
 use std::io::Read;
-use crate::config::AppConfig;
 
 #[post("/api")]
 async fn rest_api(
@@ -83,6 +88,23 @@ fn read_tables_from_file(file_path: &str) -> Result<Vec<Table>, Box<dyn std::err
     Ok(tables)
 }
 
+async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+    let config = req
+        .app_data::<Config>()
+        .map(|data| data.get_ref().clone())
+        .unwrap_or_else(Default::default);
+    match auth::validate_token(credentials.token()) {
+        Ok(res) => {
+            if res == true {
+                Ok(req)
+            } else {
+                Err(AuthenticationError::from(config).into())
+            }
+        }
+        Err(_) => Err(AuthenticationError::from(config).into()),
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // initialize environment
@@ -93,10 +115,10 @@ async fn main() -> std::io::Result<()> {
 
     log::info!("setting up app configurations");
 
-    
     // read the configurations
-    let config = config::read_config_file("config.toml").expect("Error reading the configuration file.");  
-    
+    let config =
+        config::read_config_file("config.toml").expect("Error reading the configuration file.");
+
     //setup database connection
     let db_user = config.database.db_user;
     let db_password = config.database.db_password;
@@ -108,10 +130,11 @@ async fn main() -> std::io::Result<()> {
     log::info!("initializing database connection");
     let pool = mysql::Pool::new(builder).unwrap();
     let sql_shared_data = web::Data::new(pool.clone());
-    
+
     //setup cache server client
-    let cache_server = "memcache://".to_string() + &config.caching.cache_host.to_string() + ":11211";
-    println!("{}",cache_server);
+    let cache_server =
+        "memcache://".to_string() + &config.caching.cache_host.to_string() + ":11211";
+    println!("{}", cache_server);
     let cache_client = match memcache::Client::connect(cache_server) {
         Ok(client) => Some(client),
         Err(_) => {
@@ -125,8 +148,12 @@ async fn main() -> std::io::Result<()> {
     //fetch the schema from the database
 
     log::info!("importing table schema");
-    if (config.schema.fetch_schema == true){
-        db_utils::fetch_schema(&pool.clone(),config.schema.relationship_file.clone(),config.schema.schema_file.clone());
+    if (config.schema.fetch_schema == true) {
+        db_utils::fetch_schema(
+            &pool.clone(),
+            config.schema.relationship_file.clone(),
+            config.schema.schema_file.clone(),
+        );
     }
     let tables = match read_tables_from_file(&config.schema.schema_file) {
         Ok(tables) => tables,
@@ -136,9 +163,10 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-
     HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
+            .wrap(Logger::new("%a %{User-Agent}i"))
             .app_data(sql_shared_data.clone())
             .app_data(memcache_connection_client.clone())
             .app_data(web::Data::new(AppState {
@@ -151,7 +179,7 @@ async fn main() -> std::io::Result<()> {
             .service(echo)
             .service(get_query)
             .service(rest_api)
-            // .service(fetch_schema)
+        // .service(fetch_schema)
     })
     .bind(("0.0.0.0", 8080))?
     .run()
