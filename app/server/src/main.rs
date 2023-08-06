@@ -95,7 +95,7 @@ async fn main() -> std::io::Result<()> {
 
     
     // read the configurations
-    let config = config::read_config_file("config.ini").expect("Error reading the configuration file.");  
+    let config = config::read_config_file("config.toml").expect("Error reading the configuration file.");  
     
     //setup database connection
     let db_user = config.database.db_user;
@@ -125,10 +125,10 @@ async fn main() -> std::io::Result<()> {
     //fetch the schema from the database
 
     log::info!("importing table schema");
-    if (config.other.fetch_schema == true){
-        db_utils::fetch_schema(&pool.clone(),config.other.relationship_file.clone(),config.other.schema_file.clone());
+    if (config.schema.fetch_schema == true){
+        db_utils::fetch_schema(&pool.clone(),config.schema.relationship_file.clone(),config.schema.schema_file.clone());
     }
-    let tables = match read_tables_from_file(&config.other.schema_file) {
+    let tables = match read_tables_from_file(&config.schema.schema_file) {
         Ok(tables) => tables,
         Err(err) => {
             log::error!("{}", err);
