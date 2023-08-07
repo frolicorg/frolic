@@ -83,8 +83,9 @@ The output of the above request will be as follows:
 
 ## Running Project
 
-### 1. Add your MySQL database credentials
-Enter your MySQL database credentials in the [config.ini](https://github.com/arihantparsoya/dashboard-api-layer/blob/prod/app/server/config.ini) file.
+### 1. Configure your database
+
+Configure your database in [config.toml](https://www.frolicorg.com/docs/getting-started/app-configurations).
 
 ### 2. Run the Project
 
