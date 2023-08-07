@@ -5,7 +5,7 @@ use derive_more::{Display, Error, From};
 use hex;
 use log;
 use memcache::Client;
-use models::{Column, DataRequest, DataResponse, Table};
+use models::{AttributeValue, Column, DataRequest, DataResponse, Table};
 use mysql::from_value_opt;
 use mysql::prelude::Queryable;
 use serde::{Deserialize, Serialize};
@@ -151,23 +151,33 @@ fn get_column_headers(json_query: &DataRequest) -> Vec<String> {
     column_headers
 }
 
-fn sql_row_to_hash_map(column_headers: &Vec<String>, row: &mysql::Row) -> HashMap<String, String> {
-    let mut hash_map: HashMap<String, String> = HashMap::new();
+fn sql_row_to_hash_map(
+    column_headers: &Vec<String>,
+    row: &mysql::Row,
+) -> HashMap<String, AttributeValue> {
+    let mut hash_map: HashMap<String, AttributeValue> = HashMap::new();
 
     for (index, column) in row.columns_ref().iter().enumerate() {
         if let Some(Ok(value)) = row.get_opt(index) {
-            let value_as_string = from_value_opt::<String>(value);
-
             if let Some(key) = column_headers.get(index) {
-                hash_map.insert(
-                    key.to_string(),
-                    value_as_string.unwrap_or_else(|_| "NULL".to_string()),
-                );
+                let value_as_float = from_value_opt::<f32>(value);
+
+                match value_as_float {
+                    Ok(float_value) => {
+                        hash_map.insert(key.to_string(), AttributeValue::Float(float_value));
+                    }
+                    Err(error) => {
+                        hash_map.insert(
+                            key.to_string(),
+                            AttributeValue::String(
+                                from_value_opt::<String>(error.0)
+                                    .unwrap_or_else(|_| "NULL".to_string()),
+                            ),
+                        );
+                    }
+                }
             }
         } else {
-            if let Some(key) = column_headers.get(index) {
-                hash_map.insert(key.to_string(), "NULL".to_string());
-            }
         }
     }
 
@@ -303,11 +313,13 @@ pub fn create_table_schema(pool: &Pool, output_file_path: &str) -> () {
     }
 }
 
-pub fn fetch_schema(sql_connection_pool: &mysql::Pool, relationship_file: String, schema_file: String) -> String {
+pub fn fetch_schema(
+    sql_connection_pool: &mysql::Pool,
+    relationship_file: String,
+    schema_file: String,
+) -> String {
     create_table_schema(&sql_connection_pool, &schema_file);
     add_table_relationship(&relationship_file, &schema_file);
-    format!(
-        "Note : Please restart the Application so that the changed reflect"
-    )
+    format!("Note : Please restart the Application so that the changed reflect")
     // Ok()
 }

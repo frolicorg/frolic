@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -36,18 +36,28 @@ pub struct Filter {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct DataResponse {
-    pub data: Vec<HashMap<String, String>>,
+    pub data: Vec<HashMap<String, AttributeValue>>,
 }
 
-// #[derive(Debug, Deserialize, Serialize, Clone)]
-// pub enum DataType {
-//     string,
-//     varchar,
-//     int,
-//     bigint,
-//     float,
-//     datetime, // Add more data types as needed
-// }
+#[derive(Debug, Deserialize)]
+pub enum AttributeValue {
+    NULL,
+    String(String),
+    Float(f32),
+}
+
+impl Serialize for AttributeValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match *self {
+            AttributeValue::NULL => serializer.serialize_unit(),
+            AttributeValue::String(ref s) => serializer.serialize_str(s),
+            AttributeValue::Float(f) => serializer.serialize_f32(f),
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Column {
