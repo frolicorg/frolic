@@ -1,5 +1,5 @@
 use crate::models;
-use models::{Dimension, Filter, Metric, Table};
+use models::{Dimension, Filter, Metric, Table, OrderBy, Order};
 use std::collections::HashMap;
 
 pub fn get_query(query: &models::DataRequest, tables: &Vec<Table>) -> String {
@@ -43,7 +43,10 @@ pub fn get_query(query: &models::DataRequest, tables: &Vec<Table>) -> String {
     };
     if let Some(order) = &query.orderby{
         order_fields = order.field.clone();
-        order_sql = format!("order by {} {}",order_fields.join(","),order.order);
+        order_sql = format!("order by {} {}",order_fields.join(","),match order.order {
+            Order::asc => "asc",
+            Order::desc => "desc",
+        });
         //not validating the columns of order by field (we can do that once we start using the name provided for validation)
         // all_fields.extend(order_fields);
     }

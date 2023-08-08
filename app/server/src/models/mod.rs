@@ -23,7 +23,13 @@ pub struct Metric {
 #[serde(deny_unknown_fields)]
 pub struct OrderBy {
     pub field: Vec<String>,
-    pub order: String,
+    pub order: Order,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Order{
+    asc,
+    desc
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
