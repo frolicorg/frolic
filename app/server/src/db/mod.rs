@@ -164,7 +164,7 @@ pub async fn run_query(
             // };
 
             let mut client = postgres_pool.get().await.unwrap();
-            let stmt = client.prepare_cached(&query).await.unwrap();
+            let stmt = client.prepare_cached("select * from your_table_name;").await.unwrap();
             let rows = client.query(&stmt, &[]).await.unwrap();
             // let handle = thread::spawn(move || {
             //     let mut client = postgres_pool_clone.lock().unwrap(); // Lock the mutex if needed
@@ -173,9 +173,11 @@ pub async fn run_query(
             // });
             
             // handle.join().unwrap();
+            let column_head: Vec<String> = vec!["id".to_string(), "title".to_string()];
+
             let hash_maps: Vec<HashMap<String, AttributeValue>> = rows
             .iter()
-            .map(|row| postgres_row_to_hash_map(column_headers, row))
+            .map(|row| postgres_row_to_hash_map(&column_head, row))
             .collect();
             // for row in rows {
             //     let event_id: Uuid = row.get("id");

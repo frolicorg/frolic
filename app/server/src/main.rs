@@ -35,18 +35,6 @@ async fn rest_api(
 ) -> actix_web::Result<impl Responder> {
     let mut is_caching = app_state.is_caching.clone();
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
-    // let response_data = web::block(move || {
-    //     db_utils::execute_query(
-    //         &json_query,
-    //         &sql_query,
-    //         &sql_connection_pool,
-    //         &memcache_connection_client,
-    //         &is_caching,
-    //         &app_state.caching_expiry,
-    //     )
-    // })
-    // .await??;
-
     let response_data = web::block(move || {
         db::execute_query(
             &json_query,
