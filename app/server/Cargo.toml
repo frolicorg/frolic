@@ -23,3 +23,7 @@ serde_derive = "1.0.136"
 actix-web-httpauth = "0.8.0"
 alcoholic_jwt = "1.0.0"
 reqwest = "0.9.22"
+deadpool-postgres = { version = "0.10.0-pre", features = ["serde"] }
+thiserror = "1.0"
+tokio-postgres = { version = "0.7", features = ["with-uuid-1"] }
+uuid = { version = "1", features = ["serde"] }

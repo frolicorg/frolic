@@ -33,7 +33,10 @@ pub fn sql_row_to_hash_map(
 
                 match value_as_float {
                     Ok(float_value) => {
-                        hash_map.insert(key.to_string(), AttributeValue::Float(float_value));
+                        hash_map.insert(
+                            key.to_string(),
+                            AttributeValue::Float(round_float_decimals(&float_value)),
+                        );
                     }
                     Err(error) => {
                         hash_map.insert(
@@ -51,4 +54,8 @@ pub fn sql_row_to_hash_map(
     }
 
     hash_map
+}
+
+fn round_float_decimals(value: &f32) -> f32 {
+    (value * 100.0).round() / 100.0
 }
