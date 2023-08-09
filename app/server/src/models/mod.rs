@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize, Serializer};
-use std::collections::HashMap;
 use crate::config::AppConfig;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -18,7 +18,7 @@ pub struct Metric {
     pub field: String,
     pub aggregate_operator: Option<String>,
     pub name: Option<String>,
-    pub distinct : Option<bool>,
+    pub distinct: Option<bool>,
 }
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -28,9 +28,9 @@ pub struct OrderBy {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum Order{
+pub enum Order {
     asc,
-    desc
+    desc,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -49,13 +49,13 @@ pub struct Filter {
     pub filter_value: String,
 }
 
-#[derive(Debug, Deserialize, Serialize,Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DataResponse {
     pub data: Vec<HashMap<String, AttributeValue>>,
 }
 
-#[derive(Debug, Deserialize,Clone)]
+#[derive(Debug, Clone)]
 pub enum AttributeValue {
     NULL,
     String(String),
@@ -71,6 +71,28 @@ impl Serialize for AttributeValue {
             AttributeValue::NULL => serializer.serialize_unit(),
             AttributeValue::String(ref s) => serializer.serialize_str(s),
             AttributeValue::Float(f) => serializer.serialize_f32(f),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AttributeValue {
+    fn deserialize<D>(deserializer: D) -> Result<AttributeValue, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum ValueHelper {
+            Null,
+            String(String),
+            Float(f32),
+        }
+
+        let value_helper = ValueHelper::deserialize(deserializer)?;
+        match value_helper {
+            ValueHelper::Null => Ok(AttributeValue::NULL),
+            ValueHelper::String(s) => Ok(AttributeValue::String(s)),
+            ValueHelper::Float(f) => Ok(AttributeValue::Float(f)),
         }
     }
 }
