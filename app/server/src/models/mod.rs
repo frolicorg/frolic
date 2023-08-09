@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
+use crate::config::AppConfig;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -48,13 +49,13 @@ pub struct Filter {
     pub filter_value: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize,Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DataResponse {
     pub data: Vec<HashMap<String, AttributeValue>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize,Clone)]
 pub enum AttributeValue {
     NULL,
     String(String),
@@ -92,6 +93,7 @@ pub struct AppState {
     pub tables: Vec<Table>,
     pub is_caching: bool,
     pub caching_expiry: u32,
+    pub app_config: AppConfig,
 }
 
 impl Table {

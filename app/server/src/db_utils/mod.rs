@@ -61,71 +61,71 @@ impl actix_web::ResponseError for PersistenceError {
     }
 }
 
-pub fn execute_query(
-    json_query: &DataRequest,
-    query: &String,
-    sql_connection_pool: &mysql::Pool,
-    cache_client: &Option<Client>,
-    is_caching: &bool,
-    caching_expiry: &u32,
-) -> Result<DataResponse, PersistenceError> {
-    // Check if the result is already in the cache
-    let cache_key = format!("{}", hash_query_to_unique_id(query));
+// pub fn execute_query(
+//     json_query: &DataRequest,
+//     query: &String,
+//     sql_connection_pool: &mysql::Pool,
+//     cache_client: &Option<Client>,
+//     is_caching: &bool,
+//     caching_expiry: &u32,
+// ) -> Result<DataResponse, PersistenceError> {
+//     // Check if the result is already in the cache
+//     let cache_key = format!("{}", hash_query_to_unique_id(query));
 
-    log::info!("Caching : {}", is_caching);
-    if *is_caching {
-        if let Some(client) = cache_client {
-            if let Ok(cached_result) = client.get::<String>(&cache_key) {
-                if let Some(result) = cached_result {
-                    match deserialize_data::<DataResponse>(&result) {
-                        Ok(response) => return Ok(response),
-                        Err(err) => log::info!("DeSerialization failed: {}", err),
-                    }
-                }
-            }
-        }
-    }
+//     log::info!("Caching : {}", is_caching);
+//     if *is_caching {
+//         if let Some(client) = cache_client {
+//             if let Ok(cached_result) = client.get::<String>(&cache_key) {
+//                 if let Some(result) = cached_result {
+//                     match deserialize_data::<DataResponse>(&result) {
+//                         Ok(response) => return Ok(response),
+//                         Err(err) => log::info!("DeSerialization failed: {}", err),
+//                     }
+//                 }
+//             }
+//         }
+//     }
 
-    let mut conn = sql_connection_pool.get_conn()?;
+//     let mut conn = sql_connection_pool.get_conn()?;
 
-    let column_headers: Vec<String> = get_column_headers(&json_query);
-    // Execute the query
-    let response = run_query(&column_headers, &query, &mut conn)?;
+//     let column_headers: Vec<String> = get_column_headers(&json_query);
+//     // Execute the query
+//     let response = run_query(&column_headers, &query, &mut conn)?;
 
-    if *is_caching {
-        if let Some(client) = cache_client {
-            match serialize_data::<String>(&response) {
-                Ok(json) => {
-                    client.set(&cache_key, json, caching_expiry.clone()).ok();
-                    // Remove the oldest item from the cache if the limit is reached
-                    clean_cache_if_needed(client);
-                }
+//     if *is_caching {
+//         if let Some(client) = cache_client {
+//             match serialize_data::<String>(&response) {
+//                 Ok(json) => {
+//                     client.set(&cache_key, json, caching_expiry.clone()).ok();
+//                     // Remove the oldest item from the cache if the limit is reached
+//                     clean_cache_if_needed(client);
+//                 }
 
-                Err(err) => log::error!("Serialization failed: {}", err),
-            }
-        }
-    }
+//                 Err(err) => log::error!("Serialization failed: {}", err),
+//             }
+//         }
+//     }
 
-    Ok(response)
-}
+//     Ok(response)
+// }
 
-fn run_query(
-    column_headers: &Vec<String>,
-    query: &String,
-    conn: &mut mysql::PooledConn,
-) -> mysql::error::Result<DataResponse> {
-    log::info!("Executing Query");
+// fn run_query(
+//     column_headers: &Vec<String>,
+//     query: &String,
+//     conn: &mut mysql::PooledConn,
+// ) -> mysql::error::Result<DataResponse> {
+//     log::info!("Executing Query");
 
-    let response_data = conn.query_map(query, |row: mysql::Row| {
-        sql_row_to_hash_map(column_headers, &row)
-    });
+//     let response_data = conn.query_map(query, |row: mysql::Row| {
+//         sql_row_to_hash_map(column_headers, &row)
+//     });
 
-    Ok(DataResponse {
-        data: response_data?,
-    })
-}
+//     Ok(DataResponse {
+//         data: response_data?,
+//     })
+// }
 
-fn get_column_headers(json_query: &DataRequest) -> Vec<String> {
+pub fn get_column_headers(json_query: &DataRequest) -> Vec<String> {
     let mut column_headers: Vec<String> = Vec::new();
 
     if let Some(ref dimensions) = json_query.dimensions {
@@ -151,38 +151,6 @@ fn get_column_headers(json_query: &DataRequest) -> Vec<String> {
     column_headers
 }
 
-fn sql_row_to_hash_map(
-    column_headers: &Vec<String>,
-    row: &mysql::Row,
-) -> HashMap<String, AttributeValue> {
-    let mut hash_map: HashMap<String, AttributeValue> = HashMap::new();
-
-    for (index, column) in row.columns_ref().iter().enumerate() {
-        if let Some(Ok(value)) = row.get_opt(index) {
-            if let Some(key) = column_headers.get(index) {
-                let value_as_float = from_value_opt::<f32>(value);
-
-                match value_as_float {
-                    Ok(float_value) => {
-                        hash_map.insert(key.to_string(), AttributeValue::Float(float_value));
-                    }
-                    Err(error) => {
-                        hash_map.insert(
-                            key.to_string(),
-                            AttributeValue::String(
-                                from_value_opt::<String>(error.0)
-                                    .unwrap_or_else(|_| "NULL".to_string()),
-                            ),
-                        );
-                    }
-                }
-            }
-        } else {
-        }
-    }
-
-    hash_map
-}
 
 fn sql_row_to_string_list(row: &mysql::Row) -> Vec<String> {
     let mut string_list = Vec::new();

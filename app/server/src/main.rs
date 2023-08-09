@@ -11,6 +11,7 @@ use db_utils::{add_table_relationship, create_table_schema};
 mod cache;
 mod models;
 mod query_engine;
+mod db;
 use crate::config::AppConfig;
 use actix_web::middleware::Logger;
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
@@ -21,27 +22,44 @@ use memcache::Client;
 use std::fs::File;
 use std::io::Read;
 use std::pin::Pin;
+use db::{poolBuilder,execute_query};
+
 
 #[post("/api")]
 async fn rest_api(
     json_query: web::Json<DataRequest>,
-    sql_connection_pool: web::Data<mysql::Pool>,
+    // sql_connection_pool: web::Data<mysql::Pool>,
+    db_shared_data: web::Data<db::DBPool>,
     memcache_connection_client: web::Data<Option<Client>>,
     app_state: web::Data<AppState>,
 ) -> actix_web::Result<impl Responder> {
     let mut is_caching = app_state.is_caching.clone();
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
+    // let response_data = web::block(move || {
+    //     db_utils::execute_query(
+    //         &json_query,
+    //         &sql_query,
+    //         &sql_connection_pool,
+    //         &memcache_connection_client,
+    //         &is_caching,
+    //         &app_state.caching_expiry,
+    //     )
+    // })
+    // .await??;
+
     let response_data = web::block(move || {
-        db_utils::execute_query(
+        db::execute_query(
             &json_query,
             &sql_query,
-            &sql_connection_pool,
+            &db_shared_data,
+            &app_state.app_config.database.db_type,
             &memcache_connection_client,
             &is_caching,
             &app_state.caching_expiry,
         )
     })
     .await??;
+
     Ok(web::Json(response_data))
 }
 
@@ -64,20 +82,7 @@ async fn echo(req_body: String) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
 
-fn get_conn_builder(
-    db_user: String,
-    db_password: String,
-    db_host: String,
-    db_port: u16,
-    db_name: String,
-) -> mysql::OptsBuilder {
-    mysql::OptsBuilder::new()
-        .ip_or_hostname(Some(db_host))
-        .tcp_port(db_port)
-        .db_name(Some(db_name))
-        .user(Some(db_user))
-        .pass(Some(db_password))
-}
+
 
 fn read_tables_from_file(file_path: &str) -> Result<Vec<Table>, Box<dyn std::error::Error>> {
     // Read the contents of the file
@@ -126,21 +131,28 @@ async fn main() -> std::io::Result<()> {
         config::read_config_file("config.toml").expect("Error reading the configuration file.");
 
     // setup database connection
-    let db_type = config.database.db_type;
-    if db_type != "mysql" {
-        panic!("This database is not supported.");
-    };
-    let db_user = config.database.db_user;
-    let db_password = config.database.db_password;
-    let db_host = config.database.db_host;
-    let db_name = config.database.db_name;
-    let db_port = config.database.db_port;
-    let builder = get_conn_builder(db_user, db_password, db_host, db_port, db_name);
+    let db_config = config.database.clone();
+    let db_type = db_config.db_type;
+    let db_user = db_config.db_user;
+    let db_password = db_config.db_password;
+    let db_host = db_config.db_host;
+    let db_name = db_config.db_name;
+    let db_port = db_config.db_port;
 
     log::info!("initializing database connection");
-    let pool = mysql::Pool::new(builder).unwrap();
-    let sql_shared_data = web::Data::new(pool.clone());
-
+    //setup the pool;
+    let mut db_pool = db::DBPool::new();
+    match poolBuilder(db_type, db_user, db_password, db_host, db_port, db_name) {
+        Ok(db_pool_local) => {
+            // Use the database pool
+            db_pool = (db_pool_local);
+        }
+        Err(error) => {
+            eprintln!("Error: {}", error);
+        }
+    };
+    let db_shared_data = web::Data::new(db_pool.clone());
+    // let result = execute_query(postgres_pool.clone()).await;
     //setup cache server client
     let cache_server =
         "memcache://".to_string() + &config.caching.cache_host.to_string() + ":11211";
@@ -158,13 +170,13 @@ async fn main() -> std::io::Result<()> {
     let memcache_connection_client = web::Data::new(cache_client);
 
     log::info!("Importing table schema");
-    if (config.schema.fetch_schema == true) {
-        db_utils::fetch_schema(
-            &pool.clone(),
-            config.schema.relationship_file.clone(),
-            config.schema.schema_file.clone(),
-        );
-    }
+    // if (config.schema.fetch_schema == true) {
+    //     db_utils::fetch_schema(
+    //         &pool.clone(),
+    //         config.schema.relationship_file.clone(),
+    //         config.schema.schema_file.clone(),
+    //     );
+    // }
 
     let tables = match read_tables_from_file(&config.schema.schema_file) {
         Ok(tables) => tables,
@@ -183,13 +195,15 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(Logger::new("%a %{User-Agent}i"))
             // .wrap(auth)
-            .app_data(sql_shared_data.clone())
+            // .app_data(sql_shared_data.clone())
+            .app_data(db_shared_data.clone())
             .app_data(memcache_connection_client.clone())
             .app_data(web::Data::new(AppState {
                 app_name: String::from("Actix Web"),
                 tables: tables.clone(),
                 is_caching: config.caching.cache_enabled.clone(),
                 caching_expiry: config.caching.cache_expiry.clone(),
+                app_config: config.clone(),
             }))
             .service(hello)
             .service(echo)

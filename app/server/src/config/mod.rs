@@ -4,7 +4,7 @@ use std::process::exit;
 use toml;
 
 // Define a struct to hold the configurations
-#[derive(Deserialize)]
+#[derive(Deserialize,Clone)]
 pub struct AppConfig {
     pub database: DatabaseConfig,
     pub caching: CachingConfig,
@@ -13,7 +13,7 @@ pub struct AppConfig {
 }
 
 // Database configurations
-#[derive(Deserialize)]
+#[derive(Deserialize,Clone)]
 pub struct DatabaseConfig {
     pub db_type: String,
     pub db_host: String,
@@ -24,7 +24,7 @@ pub struct DatabaseConfig {
 }
 
 // Caching configurations
-#[derive(Deserialize)]
+#[derive(Deserialize,Clone)]
 pub struct CachingConfig {
     pub cache_enabled: bool,
     pub cache_expiry: u32,
@@ -34,14 +34,14 @@ pub struct CachingConfig {
 }
 
 // Other custom configurations
-#[derive(Deserialize)]
+#[derive(Deserialize,Clone)]
 pub struct SchemaConfig {
     pub fetch_schema: bool,
     pub relationship_file: String,
     pub schema_file: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Clone)]
 pub struct OpenIDAuthentication {
     pub authenticate: bool,
     pub authority: String,
