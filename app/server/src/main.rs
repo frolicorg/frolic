@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{
     dev::ServiceRequest, get, post, web, App, Error, HttpResponse, HttpServer, Responder, Result,
 };
@@ -7,23 +8,22 @@ use models::{AppState, DataRequest, Table};
 use std::env;
 mod config;
 mod db_utils;
-use db::{create_table_schema};
+use db::create_table_schema;
 mod cache;
+mod db;
 mod models;
 mod query_engine;
-mod db;
 use crate::config::AppConfig;
 use actix_web::middleware::Logger;
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
-mod auth;
+mod middlewares;
 use actix_web_httpauth::middleware::HttpAuthentication;
+use db::{execute_query, poolBuilder};
 use memcache::Client;
 use std::fs::File;
 use std::io::Read;
 use std::pin::Pin;
-use db::{poolBuilder,execute_query};
-
 
 #[post("/api")]
 async fn rest_api(
@@ -70,8 +70,6 @@ async fn echo(req_body: String) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
 
-
-
 fn read_tables_from_file(file_path: &str) -> Result<Vec<Table>, Box<dyn std::error::Error>> {
     // Read the contents of the file
     let mut file = File::open(file_path)?;
@@ -92,7 +90,7 @@ async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<Servi
         .map(|data| Pin::new(data).get_ref().clone())
         .unwrap_or_else(Default::default);
 
-    match auth::validate_token(credentials.token()) {
+    match middlewares::validate_token(credentials.token()) {
         Ok(res) => {
             if res == true {
                 Ok(req)
@@ -131,7 +129,14 @@ async fn main() -> std::io::Result<()> {
     log::info!("initializing database connection");
     //setup the pool;
     let mut db_pool = db::DBPool::new();
-    match poolBuilder(db_type.clone(), db_user, db_password, db_host, db_port, db_name) {
+    match poolBuilder(
+        db_type.clone(),
+        db_user,
+        db_password,
+        db_host,
+        db_port,
+        db_name,
+    ) {
         Ok(db_pool_local) => {
             // Use the database pool
             db_pool = (db_pool_local);
@@ -165,7 +170,8 @@ async fn main() -> std::io::Result<()> {
             config.schema.relationship_file.clone(),
             config.schema.schema_file.clone(),
             db_type.clone(),
-        ).await;
+        )
+        .await;
     }
 
     let tables = match read_tables_from_file(&config.schema.schema_file) {
@@ -181,9 +187,12 @@ async fn main() -> std::io::Result<()> {
     // let auth = HttpAuthentication::bearer(validator);
 
     HttpServer::new(move || {
+        let cors = Cors::default().allow_any_origin().send_wildcard();
+
         App::new()
             .wrap(Logger::default())
             .wrap(Logger::new("%a %{User-Agent}i"))
+            .wrap(Cors::permissive())
             // .wrap(auth)
             // .app_data(sql_shared_data.clone())
             .app_data(db_shared_data.clone())

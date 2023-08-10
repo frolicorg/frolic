@@ -12,7 +12,7 @@ serde_json = "1.0"
 dotenv = "0.15"
 mysql = "24"
 log = "0.4.19"
-env_logger = "0.9.0"                               # Add this line
+env_logger = "0.9.0" # Add this line
 derive_more = "0.99.17"
 memcache = "0.17.0"
 sha2 = "0.10.7"
@@ -25,8 +25,12 @@ alcoholic_jwt = "1.0.0"
 reqwest = "0.9.22"
 deadpool-postgres = { version = "0.10.0-pre", features = ["serde"] }
 thiserror = "1.0"
-tokio-postgres = { version = "0.7", features = ["with-uuid-1","with-chrono-0_4"] }
+tokio-postgres = { version = "0.7", features = [
+    "with-uuid-1",
+    "with-chrono-0_4",
+] }
 uuid = { version = "1", features = ["serde"] }
 chrono = "0.4"
 futures-util = "0.3.28"
 tokio = { version = "1", features = ["full"] }
+actix-cors = "0.6.4"
