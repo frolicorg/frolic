@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{
     dev::ServiceRequest, get, post, web, App, Error, HttpResponse, HttpServer, Responder, Result,
 };
@@ -7,13 +8,16 @@ use models::{AppState, DataRequest, Table};
 mod config;
 mod db_utils;
 mod cache;
+mod db;
 mod models;
 mod query_engine;
 mod db;
 use actix_web::middleware::Logger;
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
-mod auth;
+mod middlewares;
+use actix_web_httpauth::middleware::HttpAuthentication;
+use db::{execute_query, poolBuilder};
 use memcache::Client;
 use std::fs::File;
 use std::io::Read;
@@ -63,8 +67,6 @@ async fn echo(req_body: String) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
 
-
-
 fn read_tables_from_file(file_path: &str) -> Result<Vec<Table>, Box<dyn std::error::Error>> {
     // Read the contents of the file
     let mut file = File::open(file_path)?;
@@ -85,7 +87,7 @@ async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<Servi
         .map(|data| Pin::new(data).get_ref().clone())
         .unwrap_or_else(Default::default);
 
-    match auth::validate_token(credentials.token()) {
+    match middlewares::validate_token(credentials.token()) {
         Ok(res) => {
             if res == true {
                 Ok(req)
@@ -157,7 +159,8 @@ async fn main() -> std::io::Result<()> {
             config.schema.relationship_file.clone(),
             config.schema.schema_file.clone(),
             db_type.clone(),
-        ).await;
+        )
+        .await;
     }
 
     let tables = match read_tables_from_file(&config.schema.schema_file) {
@@ -173,9 +176,12 @@ async fn main() -> std::io::Result<()> {
     // let auth = HttpAuthentication::bearer(validator);
 
     HttpServer::new(move || {
+        let cors = Cors::default().allow_any_origin().send_wildcard();
+
         App::new()
             .wrap(Logger::default())
             .wrap(Logger::new("%a %{User-Agent}i"))
+            .wrap(Cors::permissive())
             // .wrap(auth)
             // .app_data(sql_shared_data.clone())
             .app_data(db_shared_data.clone())
