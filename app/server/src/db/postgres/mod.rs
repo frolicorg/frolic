@@ -5,9 +5,10 @@ use uuid::Uuid;
 use crate::db::DBPool;
 use std::collections::HashMap;
 use crate::models;
-use models::{AttributeValue};
+use crate::models::{AttributeValue,Column};
 use mysql::from_value_opt;
 use chrono::NaiveDateTime;
+use crate::db_utils::PersistenceError;
 
 
 pub fn postgresPoolBuilder(db_user:String,db_password:String,db_host:String,db_port:u16,db_name:String) -> Pool{
@@ -26,6 +27,71 @@ pub fn get_postgres_pool(dbpool: &DBPool) -> Option<&Pool> {
     match dbpool {
         DBPool::postgres(postgres_pool) => Some(postgres_pool),
         _ => None,
+    }
+}
+
+pub async fn fetch_all_tables_postgres(
+    dbpool: &DBPool,
+) -> Result<Vec<String>, PersistenceError> {
+    if let Some(postgres_pool) = get_postgres_pool(dbpool) {
+
+        let query = "SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = current_schema()
+          AND table_name NOT LIKE 'sys_%'
+          AND table_name NOT LIKE 'pg_%'
+          AND table_name NOT IN ('geography_columns', 'geometry_columns');
+        ";
+        let mut client = postgres_pool.get().await.unwrap();
+        let stmt = client.prepare(query).await.map_err(|err| PersistenceError::Unknown)?;
+
+        let rows = client
+            .query(&stmt, &[])
+            .await
+            .map_err(|err| PersistenceError::Unknown)?;
+
+        let tables: Vec<String> = rows
+            .iter()
+            .map(|row| row.get::<_, String>("table_name"))
+            .collect();
+        println!("{}",tables.join(","));
+        Ok(tables)
+    }
+    else{
+        Err(PersistenceError::Unknown)
+    }
+}
+
+pub async fn fetch_all_columns_postgres(
+    dbpool: &DBPool, table_name: &str
+) -> Result<Vec<Column>, PersistenceError> {
+    if let Some(postgres_pool) = get_postgres_pool(dbpool) {
+        let query = format!(
+            "SELECT column_name, data_type  FROM information_schema.columns WHERE table_schema = current_schema() and table_name = '{}'",
+            table_name
+        );
+        let mut client = postgres_pool.get().await.unwrap();
+        let stmt = client.prepare(&query).await.map_err(|err| PersistenceError::Unknown)?;
+
+        let rows = client
+            .query(&stmt, &[])
+            .await
+            .map_err(|err| PersistenceError::Unknown)?;
+
+        let columns: Vec<Column> = rows
+            .iter()
+            .map(|row| 
+                Column {
+                    name: row.get::<_, String>("column_name"),
+                    datatype: row.get::<_, String>("data_type"),
+                }
+            )
+            .collect();
+
+        Ok(columns)
+    }
+    else{
+        Err(PersistenceError::Unknown)
     }
 }
 

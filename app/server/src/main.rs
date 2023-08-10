@@ -7,7 +7,7 @@ use models::{AppState, DataRequest, Table};
 use std::env;
 mod config;
 mod db_utils;
-use db_utils::{add_table_relationship, create_table_schema};
+use db::{create_table_schema};
 mod cache;
 mod models;
 mod query_engine;
@@ -104,7 +104,8 @@ async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<Servi
     }
 }
 
-#[actix_web::main]
+// #[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
     // initialize environment
     dotenv::dotenv().ok();
@@ -130,7 +131,7 @@ async fn main() -> std::io::Result<()> {
     log::info!("initializing database connection");
     //setup the pool;
     let mut db_pool = db::DBPool::new();
-    match poolBuilder(db_type, db_user, db_password, db_host, db_port, db_name) {
+    match poolBuilder(db_type.clone(), db_user, db_password, db_host, db_port, db_name) {
         Ok(db_pool_local) => {
             // Use the database pool
             db_pool = (db_pool_local);
@@ -158,13 +159,14 @@ async fn main() -> std::io::Result<()> {
     let memcache_connection_client = web::Data::new(cache_client);
 
     log::info!("Importing table schema");
-    // if (config.schema.fetch_schema == true) {
-    //     db_utils::fetch_schema(
-    //         &pool.clone(),
-    //         config.schema.relationship_file.clone(),
-    //         config.schema.schema_file.clone(),
-    //     );
-    // }
+    if (config.schema.fetch_schema == true) {
+        db::fetch_schema(
+            db_pool.clone(),
+            config.schema.relationship_file.clone(),
+            config.schema.schema_file.clone(),
+            db_type.clone(),
+        ).await;
+    }
 
     let tables = match read_tables_from_file(&config.schema.schema_file) {
         Ok(tables) => tables,

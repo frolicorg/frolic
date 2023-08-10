@@ -1,5 +1,6 @@
 use crate::cache;
 use crate::models;
+use crate::db;
 use actix_web::http::StatusCode;
 use derive_more::{Display, Error, From};
 use hex;
@@ -14,6 +15,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
+use db::{fetch_all_tables,fetch_columns_for_table};
 
 // use mysql::prelude::*;
 use cache::{
@@ -61,70 +63,6 @@ impl actix_web::ResponseError for PersistenceError {
     }
 }
 
-// pub fn execute_query(
-//     json_query: &DataRequest,
-//     query: &String,
-//     sql_connection_pool: &mysql::Pool,
-//     cache_client: &Option<Client>,
-//     is_caching: &bool,
-//     caching_expiry: &u32,
-// ) -> Result<DataResponse, PersistenceError> {
-//     // Check if the result is already in the cache
-//     let cache_key = format!("{}", hash_query_to_unique_id(query));
-
-//     log::info!("Caching : {}", is_caching);
-//     if *is_caching {
-//         if let Some(client) = cache_client {
-//             if let Ok(cached_result) = client.get::<String>(&cache_key) {
-//                 if let Some(result) = cached_result {
-//                     match deserialize_data::<DataResponse>(&result) {
-//                         Ok(response) => return Ok(response),
-//                         Err(err) => log::info!("DeSerialization failed: {}", err),
-//                     }
-//                 }
-//             }
-//         }
-//     }
-
-//     let mut conn = sql_connection_pool.get_conn()?;
-
-//     let column_headers: Vec<String> = get_column_headers(&json_query);
-//     // Execute the query
-//     let response = run_query(&column_headers, &query, &mut conn)?;
-
-//     if *is_caching {
-//         if let Some(client) = cache_client {
-//             match serialize_data::<String>(&response) {
-//                 Ok(json) => {
-//                     client.set(&cache_key, json, caching_expiry.clone()).ok();
-//                     // Remove the oldest item from the cache if the limit is reached
-//                     clean_cache_if_needed(client);
-//                 }
-
-//                 Err(err) => log::error!("Serialization failed: {}", err),
-//             }
-//         }
-//     }
-
-//     Ok(response)
-// }
-
-// fn run_query(
-//     column_headers: &Vec<String>,
-//     query: &String,
-//     conn: &mut mysql::PooledConn,
-// ) -> mysql::error::Result<DataResponse> {
-//     log::info!("Executing Query");
-
-//     let response_data = conn.query_map(query, |row: mysql::Row| {
-//         sql_row_to_hash_map(column_headers, &row)
-//     });
-
-//     Ok(DataResponse {
-//         data: response_data?,
-//     })
-// }
-
 pub fn get_column_headers(json_query: &DataRequest) -> Vec<String> {
     let mut column_headers: Vec<String> = Vec::new();
 
@@ -167,27 +105,7 @@ fn sql_row_to_string_list(row: &mysql::Row) -> Vec<String> {
     string_list
 }
 
-// Function to fetch all table names in the database
-pub fn fetch_all_tables(pool: &Pool) -> Result<Vec<String>, mysql::Error> {
-    let mut conn = pool.get_conn()?;
-    let query = "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()";
-    let tables: Vec<String> = conn.query_map(query, |table_name| table_name)?;
-    Ok(tables)
-}
 
-// Function to fetch columns and their data types for a given table
-pub fn fetch_columns_for_table(pool: &Pool, table_name: &str) -> Result<Vec<Column>, mysql::Error> {
-    let mut conn = pool.get_conn()?;
-    let query = format!(
-        "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = '{}'",
-        table_name
-    );
-    let columns: Vec<Column> = conn.query_map(query, |(column_name, datatype)| Column {
-        name: column_name,
-        datatype,
-    })?;
-    Ok(columns)
-}
 
 pub fn update_relationship(
     file_path: &str,
@@ -249,45 +167,3 @@ pub fn add_table_relationship(input_file_path: &str, output_file_path: &str) -> 
     }
 }
 
-pub fn create_table_schema(pool: &Pool, output_file_path: &str) -> () {
-    match fetch_all_tables(&pool) {
-        Ok(tables) => {
-            let mut table_info_list: Vec<Table> = Vec::new();
-            let mut relationships: Vec<HashMap<String, (String, String)>> = Vec::new();
-            for table_name in &tables {
-                match fetch_columns_for_table(&pool, table_name) {
-                    Ok(columns) => {
-                        let table_info = Table {
-                            name: table_name.clone(),
-                            columns,
-                            relationships: relationships.clone(),
-                        };
-                        table_info_list.push(table_info);
-                    }
-                    Err(err) => {
-                        log::error!("Error fetching columns for table {}: {:?}", table_name, err)
-                    }
-                }
-            }
-
-            // Convert the table_info_list to a JSON string
-            let json_string =
-                serde_json::to_string_pretty(&table_info_list).expect("Error converting to JSON");
-
-            // Write the JSON string to a file
-            std::fs::write(output_file_path, json_string).expect("Error writing to file");
-        }
-        Err(err) => log::error!("Error fetching tables: {:?}", err),
-    }
-}
-
-pub fn fetch_schema(
-    sql_connection_pool: &mysql::Pool,
-    relationship_file: String,
-    schema_file: String,
-) -> String {
-    create_table_schema(&sql_connection_pool, &schema_file);
-    add_table_relationship(&relationship_file, &schema_file);
-    format!("Note : Please restart the Application so that the changed reflect")
-    // Ok()
-}

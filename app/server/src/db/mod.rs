@@ -2,20 +2,21 @@
 use deadpool_postgres::{Pool};
 mod postgres;
 mod mysql_db;
-use crate::db::postgres::get_postgres_pool;
-use crate::db_utils::{get_column_headers};
+use crate::db::postgres::{get_postgres_pool, fetch_all_tables_postgres,fetch_all_columns_postgres};
+use crate::db_utils::{get_column_headers,add_table_relationship};
 use crate::cache::{
     clean_cache_if_needed, deserialize_data, hash_query_to_unique_id, sanitize_query,
     serialize_data,
 };
 use postgres::{postgresPoolBuilder,postgres_row_to_hash_map};
-use mysql_db::{mysqlPoolBuilder,get_mysql_pool,sql_row_to_hash_map};
+use mysql_db::{mysqlPoolBuilder,get_mysql_pool,sql_row_to_hash_map,fetch_all_tables_mysql,fetch_all_columns_mysql};
 use crate::models::{AttributeValue, Column, DataRequest, DataResponse, Table};
 use mysql::prelude::Queryable;
 use memcache::Client;
 use crate::db_utils::PersistenceError;
 use std::collections::HashMap;
 use actix_web::rt::Runtime;
+
 // use tokio::runtime;
 
 
@@ -157,46 +158,17 @@ pub async fn run_query(
         log::info!("Executing PostGres Query");
 
         if let Some(postgres_pool) = get_postgres_pool(&pool) {
-        
-            // let mut client = match postgres_pool.get().await.unwrap() {
-            //     Ok(client) => client,
-            //     Err(err) => return Err(PersistenceError::MysqlError(err)),
-            // };
 
             let mut client = postgres_pool.get().await.unwrap();
-            let stmt = client.prepare_cached("select * from your_table_name;").await.unwrap();
+            let stmt = client.prepare_cached(query).await.unwrap();
             let rows = client.query(&stmt, &[]).await.unwrap();
-            // let handle = thread::spawn(move || {
-            //     let mut client = postgres_pool_clone.lock().unwrap(); // Lock the mutex if needed
-            //     let stmt = client.prepare_cached(&query).unwrap();
-            //     let rows = client.query(&stmt, &[]).unwrap();
-            // });
-            
-            // handle.join().unwrap();
             let column_head: Vec<String> = vec!["id".to_string(), "title".to_string()];
 
             let hash_maps: Vec<HashMap<String, AttributeValue>> = rows
             .iter()
             .map(|row| postgres_row_to_hash_map(&column_head, row))
             .collect();
-            // for row in rows {
-            //     let event_id: Uuid = row.get("id");
-            //     let event_name: String = row.get("title");
-            //     // You can access other columns in a similar way
-        
-            //     println!("Event ID: {}, Event Name: {}", event_id, event_name);
-            // }
-            
-            // format!("Done")
             let response_data = hash_maps;
-
-            // let response_data = match conn.query_map(query, |row: mysql::Row| {
-            //     postgres_row_to_hash_map(column_headers, &row)
-            // }) {
-            //     Ok(response_data) => response_data,
-            //     Err(err) => return Err(PersistenceError::MysqlError(err)),
-            // };
-
             return Ok(DataResponse { data: response_data });
         }
     }
@@ -205,6 +177,78 @@ pub async fn run_query(
     // Err(PersistenceError::Unknown)
 }
 
+pub async fn fetch_schema(
+    pool: DBPool,
+    relationship_file: String,
+    schema_file: String,
+    db_type:String,
+) -> String {
+    println!("fetching {} scehma",db_type);
+    create_table_schema(&pool, &schema_file,&db_type).await;
+    add_table_relationship(&relationship_file, &schema_file);
+    format!("Note : Please restart the Application so that the changed reflect")
+    // Ok()
+}
+
+pub async fn create_table_schema(pool: &DBPool, output_file_path: &str,db_type:&str) -> () {
+    match fetch_all_tables(&pool,&db_type).await {
+        Ok(tables) => {
+            let mut table_info_list: Vec<Table> = Vec::new();
+            let mut relationships: Vec<HashMap<String, (String, String)>> = Vec::new();
+            for table_name in &tables {
+                match fetch_columns_for_table(&pool, table_name,&db_type).await {
+                    Ok(columns) => {
+                        let table_info = Table {
+                            name: table_name.clone(),
+                            columns,
+                            relationships: relationships.clone(),
+                        };
+                        table_info_list.push(table_info);
+                    }
+                    Err(err) => {
+                        log::error!("Error fetching columns for table {}: {:?}", table_name, err)
+                    }
+                }
+            }
+
+            // Convert the table_info_list to a JSON string
+            let json_string =
+                serde_json::to_string_pretty(&table_info_list).expect("Error converting to JSON");
+
+            // Write the JSON string to a file
+            std::fs::write(output_file_path, json_string).expect("Error writing to file");
+        }
+        Err(err) => log::error!("Error fetching tables: {:?}", err),
+    }
+}
+
+pub async fn fetch_all_tables(pool: &DBPool, db_type: &str) -> Result<Vec<String>, PersistenceError> {
+    match db_type {
+        "mysql" => {
+            log::info!("Executing MySQL Query");
+            fetch_all_tables_mysql(pool)
+        }
+        "postgres" => {
+            log::info!("Fetching Postgres Tables");
+            fetch_all_tables_postgres(pool).await
+        }
+        _ => Err(PersistenceError::Unknown),
+    }
+}
+
+pub async fn fetch_columns_for_table(pool: &DBPool, table_name: &str,db_type:&str) -> Result<Vec<Column>, PersistenceError> {
+    match db_type {
+        "mysql" => {
+            log::info!("Executing MySQL Query");
+            fetch_all_columns_mysql(pool,table_name)
+        }
+        "postgres" => {
+            log::info!("Fetching Postgres Tables");
+            fetch_all_columns_postgres(pool,table_name).await
+        }
+        _ => Err(PersistenceError::Unknown),
+    }
+}
 
 //execute query function is required - output will be a Result<DataResponse, PersistenceError>
 
