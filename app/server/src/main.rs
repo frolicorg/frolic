@@ -4,26 +4,22 @@ use actix_web::{
 use env_logger;
 use log;
 use models::{AppState, DataRequest, Table};
-use std::env;
 mod config;
 mod db_utils;
-use db::{create_table_schema};
 mod cache;
 mod models;
 mod query_engine;
 mod db;
-use crate::config::AppConfig;
 use actix_web::middleware::Logger;
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
 mod auth;
-use actix_web_httpauth::middleware::HttpAuthentication;
 use memcache::Client;
 use std::fs::File;
 use std::io::Read;
 use std::pin::Pin;
-use db::{poolBuilder,execute_query};
-
+use db::{pool_builder};
+use db_utils::{execute_query,fetch_schema};
 
 #[post("/api")]
 async fn rest_api(
@@ -33,17 +29,14 @@ async fn rest_api(
     memcache_connection_client: web::Data<Option<Client>>,
     app_state: web::Data<AppState>,
 ) -> actix_web::Result<impl Responder> {
-    let mut is_caching = app_state.is_caching.clone();
     let sql_query = query_engine::get_query(&json_query, &app_state.tables);
     let response_data = web::block(move || {
-        db::execute_query(
+        execute_query(
             &json_query,
             &sql_query,
             &db_shared_data,
-            &app_state.app_config.database.db_type,
+            &app_state.app_config,
             &memcache_connection_client,
-            &is_caching,
-            &app_state.caching_expiry,
         )
     })
     .await??;
@@ -131,10 +124,10 @@ async fn main() -> std::io::Result<()> {
     log::info!("initializing database connection");
     //setup the pool;
     let mut db_pool = db::DBPool::new();
-    match poolBuilder(db_type.clone(), db_user, db_password, db_host, db_port, db_name) {
+    match pool_builder(&db_type, &db_user, &db_password, &db_host, &db_port, &db_name) {
         Ok(db_pool_local) => {
             // Use the database pool
-            db_pool = (db_pool_local);
+            db_pool = db_pool_local;
         }
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -155,12 +148,11 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-    let memcache_shared_data = cache_client.clone();
     let memcache_connection_client = web::Data::new(cache_client);
 
     log::info!("Importing table schema");
-    if (config.schema.fetch_schema == true) {
-        db::fetch_schema(
+    if config.schema.fetch_schema == true {
+        fetch_schema(
             db_pool.clone(),
             config.schema.relationship_file.clone(),
             config.schema.schema_file.clone(),

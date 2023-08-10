@@ -30,3 +30,4 @@ uuid = { version = "1", features = ["serde"] }
 chrono = "0.4"
 futures-util = "0.3.28"
 tokio = { version = "1", features = ["full"] }
+clickhouse-rs = "0.1.21"

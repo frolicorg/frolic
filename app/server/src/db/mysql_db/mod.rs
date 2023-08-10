@@ -1,13 +1,14 @@
 use std::collections::HashMap;
-use crate::models::{AttributeValue,Column};
+use crate::models::{AttributeValue,Column,DataResponse};
 use crate::db::DBPool;
 use crate::db::PersistenceError;
 use mysql::prelude::Queryable;
 use mysql::from_value_opt;
-pub fn mysqlPoolBuilder(db_user:String,db_password:String,db_host:String,db_port:u16,db_name:String) -> mysql::Pool{
+
+pub fn mysql_pool_builder(db_user:&str,db_password:&str,db_host:&str,db_port:&u16,db_name:&str) -> mysql::Pool{
     let builder = mysql::OptsBuilder::new()
     .ip_or_hostname(Some(db_host))
-    .tcp_port(db_port)
+    .tcp_port(*db_port)
     .db_name(Some(db_name))
     .user(Some(db_user))
     .pass(Some(db_password));
@@ -94,4 +95,29 @@ pub fn fetch_all_columns_mysql(dbpool: &DBPool, table_name: &str) -> Result<Vec<
     } else {
         Err(PersistenceError::Unknown)
     }  
+}
+
+pub async fn run_query_mysql(
+    column_headers: &Vec<String>,
+    query: &String,
+    pool: DBPool,
+) -> Result<DataResponse, PersistenceError>{
+    if let Some(mysql_pool) = get_mysql_pool(&pool) {
+        let mut conn = match mysql_pool.get_conn() {
+            Ok(conn) => conn,
+            Err(err) => return Err(PersistenceError::MysqlError(err)),
+        };
+
+        let response_data = match conn.query_map(query, |row: mysql::Row| {
+            sql_row_to_hash_map(column_headers, &row)
+        }) {
+            Ok(response_data) => response_data,
+            Err(err) => return Err(PersistenceError::MysqlError(err)),
+        };
+
+        return Ok(DataResponse { data: response_data });
+    }
+    else{
+        Err(PersistenceError::Unknown)
+    }
 }
