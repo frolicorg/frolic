@@ -37,13 +37,13 @@ curl --location 'http://localhost/api' \
 --data '{
       "metrics": [
         {
-          "field": "products.price",
+          "field": "products.price", // <table_name>.<column_name>
           "aggregate_operator": "sum"
         }
       ],
       "dimensions": [
         {
-          "field": "products.category"
+          "field": "products.category" // <table_name>.<column_name>
         }
       ]
 }
