@@ -15,7 +15,6 @@ use std::fmt;
 // use clickhouse::{Client as ClickhouseClient};
 use postgres::{postgres_pool_builder,fetch_all_tables_postgres,fetch_all_columns_postgres,run_query_postgres};
 use mysql_db::{mysql_pool_builder,fetch_all_tables_mysql,fetch_all_columns_mysql,run_query_mysql};
-use clickhouse_db::{clickhouse_test};
 // use clickhouse_db::{clickhouse_pool_builder};
 
 // use tokio::runtime;
@@ -44,7 +43,7 @@ use clickhouse_db::{clickhouse_test};
 pub enum DBPool {
     mysql(mysql::Pool),
     postgres(deadpool_postgres::Pool),
-    // clickhouse(ClickhouseClientWrapper),
+    clickhouse(clickhouse_readonly::Pool),
     None
 }
 
@@ -67,11 +66,11 @@ pub fn pool_builder(db_type:&str,db_user:&str,db_password:&str,db_host:&str,db_p
             let db_pool = DBPool::mysql(pool);
             Ok(db_pool)
         },
-        // "clickhouse" => {
-        //     let pool = clickhouse_pool_builder(db_user, db_password, db_host, db_port, db_name);
-        //     let db_pool = DBPool::clickhouse(pool);
-        //     Ok(db_pool)
-        // }
+        "clickhouse" => {
+            let pool = clickhouse_pool_builder(db_user, db_password, db_host, db_port, db_name);
+            let db_pool = DBPool::clickhouse(pool);
+            Ok(db_pool)
+        }
         _ => Err("Unsupported database type".to_string())
     }
 }
@@ -83,11 +82,6 @@ pub async fn run_query(
     pool: DBPool,
     db_type: &str,
 ) -> Result<DataResponse, PersistenceError> {
-    if let Err(err) = clickhouse_test().await {
-        eprintln!("Error: {}", err);
-    } else {
-        println!("Connection successful");
-    }
     match db_type {
         "mysql" => {
             log::info!("Executing MySQL Query");
@@ -96,6 +90,10 @@ pub async fn run_query(
         },
         "postgres" => {
             let response_data = run_query_postgres(column_headers, query, pool).await;
+            return response_data;
+        },
+        "postgres" => {
+            let response_data = run_query_clickhouse(column_headers, query, pool).await;
             return response_data;
         },
         _ => {
