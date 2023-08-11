@@ -35,3 +35,4 @@ futures-util = "0.3.28"
 tokio = { version = "1", features = ["full"] }
 clickhouse = "0.11.5"
 actix-cors = "0.6.4"
+clickhouse-readonly = "0.1.2"

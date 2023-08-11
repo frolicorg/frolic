@@ -1,7 +1,9 @@
 // use crate::db::DBPool;
 // use crate::models::{AttributeValue,Column,DataResponse};
 // use crate::db_utils::PersistenceError;
+use clickhouse_readonly::{ClickhouseResult, Pool, PoolConfigBuilder};
 
+use futures_util::StreamExt;
 // use std::collections::HashMap;
 // use std::{env, error::Error};
 // use futures_util::StreamExt;
@@ -17,6 +19,33 @@
 //     no: u32,
 //     name: &'a str,
 // }
+
+pub async fn clickhouse_test() -> ClickhouseResult<()> {
+
+
+    let config = PoolConfigBuilder::new(
+        "clickhouse://localhost:9000/".parse().unwrap(),
+        "test".to_string(),
+        "default".to_string(),
+        "".to_string(),
+        false,
+    ).build();
+    
+    let pool = Pool::new(config);
+    let mut handle = pool.get_handle().await?;
+
+    let mut stream = handle.query("SELECT Comments FROM orders").stream();
+
+    while let Some(row) = stream.next().await {
+        let row = row?;
+        let comment: String = row.get("Comments")?;
+        // let ticker: String = row.get("asset_symbol")?;
+        // let rate: String = row.get("deposit")?;
+        eprintln!("Found {comment}");
+    }
+
+    Ok(())
+}
 
 // pub fn clickhouse_pool_builder(db_user:&str,db_password:&str,db_host:&str,db_port:&u16,db_name:&str) -> ClickhouseClientWrapper{
 //     let database_url = format!(

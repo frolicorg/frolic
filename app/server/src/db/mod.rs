@@ -15,6 +15,7 @@ use std::fmt;
 // use clickhouse::{Client as ClickhouseClient};
 use postgres::{postgres_pool_builder,fetch_all_tables_postgres,fetch_all_columns_postgres,run_query_postgres};
 use mysql_db::{mysql_pool_builder,fetch_all_tables_mysql,fetch_all_columns_mysql,run_query_mysql};
+use clickhouse_db::{clickhouse_test};
 // use clickhouse_db::{clickhouse_pool_builder};
 
 // use tokio::runtime;
@@ -82,6 +83,11 @@ pub async fn run_query(
     pool: DBPool,
     db_type: &str,
 ) -> Result<DataResponse, PersistenceError> {
+    if let Err(err) = clickhouse_test().await {
+        eprintln!("Error: {}", err);
+    } else {
+        println!("Connection successful");
+    }
     match db_type {
         "mysql" => {
             log::info!("Executing MySQL Query");
