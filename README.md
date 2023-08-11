@@ -83,11 +83,17 @@ The output of the above request will be as follows:
 
 ## Running Project
 
-### 1. Configure your database
+### 1. Clone the project
+
+```
+git clone https://github.com/frolicorg/frolic.git
+```
+
+### 2. Configure your database
 
 Configure your database in [config.toml](https://www.frolicorg.com/docs/getting-started/app-configurations).
 
-### 2. Run the Project
+### 3. Run the Project
 
 Use docker to run the database
 ```
