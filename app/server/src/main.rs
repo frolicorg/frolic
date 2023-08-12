@@ -5,23 +5,24 @@ use actix_web::{
 use env_logger;
 use log;
 use models::{AppState, DataRequest, Table};
-mod config;
-mod db_utils;
 mod cache;
+mod config;
+mod db;
+mod db_utils;
 mod models;
 mod query_engine;
-mod db;
 use actix_web::middleware::Logger;
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
 mod middlewares;
 use actix_web_httpauth::middleware::HttpAuthentication;
+use db::pool_builder;
+use db_utils::{execute_query, fetch_schema};
 use memcache::Client;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::pin::Pin;
-use db::{pool_builder};
-use db_utils::{execute_query,fetch_schema};
 
 #[post("/api")]
 async fn rest_api(
@@ -57,7 +58,11 @@ async fn get_query(
 
 #[get("/")]
 async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
+    let html_content =
+        fs::read_to_string("data/home.html").expect("Should have been able to read the file");
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(html_content)
 }
 
 #[post("/echo")]
@@ -124,7 +129,14 @@ async fn main() -> std::io::Result<()> {
     log::info!("initializing database connection");
     //setup the pool;
     let mut db_pool = db::DBPool::new();
-    match pool_builder(&db_type, &db_user, &db_password, &db_host, &db_port, &db_name) {
+    match pool_builder(
+        &db_type,
+        &db_user,
+        &db_password,
+        &db_host,
+        &db_port,
+        &db_name,
+    ) {
         Ok(db_pool_local) => {
             // Use the database pool
             db_pool = db_pool_local;
