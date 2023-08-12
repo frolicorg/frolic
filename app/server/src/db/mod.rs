@@ -15,7 +15,7 @@ use std::fmt;
 // use clickhouse::{Client as ClickhouseClient};
 use postgres::{postgres_pool_builder,fetch_all_tables_postgres,fetch_all_columns_postgres,run_query_postgres};
 use mysql_db::{mysql_pool_builder,fetch_all_tables_mysql,fetch_all_columns_mysql,run_query_mysql};
-// use clickhouse_db::{clickhouse_pool_builder};
+use clickhouse_db::{clickhouse_pool_builder,run_query_clickhouse};
 
 // use tokio::runtime;
 
@@ -92,7 +92,7 @@ pub async fn run_query(
             let response_data = run_query_postgres(column_headers, query, pool).await;
             return response_data;
         },
-        "postgres" => {
+        "clickhouse" => {
             let response_data = run_query_clickhouse(column_headers, query, pool).await;
             return response_data;
         },
