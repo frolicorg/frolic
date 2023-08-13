@@ -2,19 +2,36 @@
 
 # Database Configuration
 [database]
-db_type = "mysql"
-db_host = "thinkbricks-db.ct00o317q97i.us-east-1.rds.amazonaws.com"
-db_port = 3306
-db_name = "ecommerce_sample"
-db_user = "admin"
-db_password = "password"
+db_type = "postgres"
+db_host = "bm03zarvfjwder3hfvts-postgresql.services.clever-cloud.com"
+db_port = 5432
+db_name = "bm03zarvfjwder3hfvts"
+db_user = "ug3sirvijz1zz3apf3ap"
+db_password = "jbt1gB17pwT39s3R24B9gWDCh7bW7C"
+
+# [database]
+# db_type = "clickhouse"
+# db_host = "bm03zarvfjwder3hfvts-postgresql.services.clever-cloud.com"
+# db_port = 5432
+# db_name = "bm03zarvfjwder3hfvts"
+# db_user = "ug3sirvijz1zz3apf3ap"
+# db_password = "jbt1gB17pwT39s3R24B9gWDCh7bW7C"
+
+
+# [database]
+# db_type = "mysql"
+# db_host = "thinkbricks-db.ct00o317q97i.us-east-1.rds.amazonaws.com"
+# db_port = 3306
+# db_name = "ecommerce_sample"
+# db_user = "admin"
+# db_password = "password"
 
 # Caching Configuration
 [caching]
 cache_enabled = true
 cache_expiry = 3600
 cache_type = "memcached"
-cache_host = "memcache"
+cache_host = "127.0.0.1"
 cache_port = 11211
 
 # Other Parameters

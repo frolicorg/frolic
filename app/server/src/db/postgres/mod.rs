@@ -1,11 +1,14 @@
 use crate::db::DBPool;
-use std::collections::HashMap;
 use crate::models::{AttributeValue,Column,DataResponse};
+use crate::db_utils::PersistenceError;
+
+use std::collections::HashMap;
+use uuid::Uuid;
+
 use deadpool_postgres::{Config, Manager, ManagerConfig, Pool, RecyclingMethod, Runtime};
 use tokio_postgres::{NoTls,Row};
-use uuid::Uuid;
 use chrono::NaiveDateTime;
-use crate::db_utils::PersistenceError;
+
 
 
 pub fn postgres_pool_builder(db_user:&str,db_password:&str,db_host:&str,db_port:&u16,db_name:&str) -> Pool{
@@ -104,11 +107,11 @@ pub async fn run_query_postgres(
         let client = postgres_pool.get().await.unwrap();
         let stmt = client.prepare_cached(query).await.unwrap();
         let rows = client.query(&stmt, &[]).await.unwrap();
-        let column_head: Vec<String> = vec!["id".to_string(), "title".to_string()];
+        // let column_head: Vec<String> = vec!["id".to_string(), "title".to_string()];
 
         let hash_maps: Vec<HashMap<String, AttributeValue>> = rows
         .iter()
-        .map(|row| postgres_row_to_hash_map(&column_head, row))
+        .map(|row| postgres_row_to_hash_map(&column_headers, row))
         .collect();
         let response_data = hash_maps;
         return Ok(DataResponse { data: response_data });

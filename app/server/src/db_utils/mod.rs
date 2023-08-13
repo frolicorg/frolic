@@ -17,6 +17,7 @@ use std::io::Read;
 use db::{fetch_all_tables,fetch_columns_for_table,run_query};
 use db::{DBPool};
 use actix_web::rt::Runtime;
+use clickhouse_readonly::{ClickhouseError};
 
 // use mysql::prelude::*;
 use cache::{
@@ -39,6 +40,12 @@ pub enum PersistenceError {
     Unknown,
 }
 
+impl From<ClickhouseError> for PersistenceError {
+    fn from(error: ClickhouseError) -> Self {
+        // You can decide how to map ClickhouseError variants to PersistenceError variants here
+        PersistenceError::Unknown
+    }
+}
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Relationship {
     pub parent_table: String,
