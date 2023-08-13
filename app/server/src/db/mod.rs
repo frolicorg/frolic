@@ -4,7 +4,7 @@ mod postgres;
 mod mysql_db;
 mod clickhouse_db;
 
-use crate::models::{AttributeValue, Column, DataRequest, DataResponse, Table};
+use crate::{models::{AttributeValue, Column, DataRequest, DataResponse, Table}};
 use mysql::prelude::Queryable;
 use memcache::Client;
 use crate::db_utils::PersistenceError;
@@ -15,7 +15,7 @@ use std::fmt;
 // use clickhouse::{Client as ClickhouseClient};
 use postgres::{postgres_pool_builder,fetch_all_tables_postgres,fetch_all_columns_postgres,run_query_postgres};
 use mysql_db::{mysql_pool_builder,fetch_all_tables_mysql,fetch_all_columns_mysql,run_query_mysql};
-use clickhouse_db::{clickhouse_pool_builder,run_query_clickhouse};
+use clickhouse_db::{clickhouse_pool_builder,run_query_clickhouse,fetch_all_columns_clickhouse,fetch_all_tables_clickhouse};
 
 // use tokio::runtime;
 
@@ -109,12 +109,16 @@ pub async fn run_query(
 pub async fn fetch_all_tables(pool: &DBPool, db_type: &str) -> Result<Vec<String>, PersistenceError> {
     match db_type {
         "mysql" => {
-            log::info!("Executing MySQL Query");
+            log::info!("Fetching Mysql Tables");
             fetch_all_tables_mysql(pool)
         }
         "postgres" => {
             log::info!("Fetching Postgres Tables");
             fetch_all_tables_postgres(pool).await
+        }
+        "clickhouse" => {
+            log::info!("Fetching Clickhouse Tables");
+            fetch_all_tables_clickhouse(pool).await
         }
         _ => Err(PersistenceError::Unknown),
     }
@@ -123,12 +127,16 @@ pub async fn fetch_all_tables(pool: &DBPool, db_type: &str) -> Result<Vec<String
 pub async fn fetch_columns_for_table(pool: &DBPool, table_name: &str,db_type:&str) -> Result<Vec<Column>, PersistenceError> {
     match db_type {
         "mysql" => {
-            log::info!("Executing MySQL Query");
+            log::info!("Fetching Mysql Columns");
             fetch_all_columns_mysql(pool,table_name)
         }
         "postgres" => {
-            log::info!("Fetching Postgres Tables");
+            log::info!("Fetching Postgres Columns");
             fetch_all_columns_postgres(pool,table_name).await
+        }
+        "clickhouse" => {
+            log::info!("Fetching Clickhouse Columns");
+            fetch_all_columns_clickhouse(pool,table_name).await
         }
         _ => Err(PersistenceError::Unknown),
     }

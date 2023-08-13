@@ -37,69 +37,107 @@ pub async fn run_query_clickhouse(
     pool: DBPool,
 ) -> Result<DataResponse, PersistenceError>{
     log::info!("Executing Clickhouse Query");
-    
+    println!("{}",query);
     let mut hash_map: HashMap<String, AttributeValue> = HashMap::new();
     let mut hash_maps: Vec<HashMap<String, AttributeValue>> = Vec::new();
     if let Some(clickhouse_pool) = get_clickhouse_pool(&pool) {
-
         let mut handle = clickhouse_pool.get_handle().await?;
-
-        let mut stream = handle.query("select OrderID,CustomerID,Comments from orders;").stream();
-        // let mut col_type_string: Cow<str> = Cow::Borrowed("String");
-        // let mut col_type_i8: Cow<str> = Cow::Borrowed("Int8");
-        // let mut col_type_i16: Cow<str> = Cow::Borrowed("Int16");
-        // let mut col_type_i32: Cow<str> = Cow::Borrowed("Int32");
+        let mut stream = handle.query(query).stream();
+    
         while let Some(row) = stream.next().await {
             
             let row = row?;
             for index in 0..row.len(){
+                if let Some(key) = column_headers.get(index) {
+                    let col_name = row.name(index)?;
+                    let col_type = row.sql_type(index)?;
+                    match col_type.to_string(){
+                        Cow::Borrowed("String") => {
+                            let val: String = row.get(index)?;
+                            hash_map.insert(
+                                key.to_string(),
+                                AttributeValue::String(val)
+                            );
+                        },
+                        
+                        Cow::Borrowed("Int8") | Cow::Borrowed("Int16") | Cow::Borrowed("Int32") | Cow::Borrowed("Int64") => {
+                            let val: i64 = row.get(index)?;
+                            hash_map.insert(
+                                key.to_string(),
+                                AttributeValue::Float(val as f32),
+                            );
+                        },
+                        _ => {let _ = String::new();}
+                        
+                    }
+
+                }    
                 
-                let col_name = row.name(index)?;
-                let col_type = row.sql_type(index)?;
-                match col_type.to_string(){
-                    Cow::Borrowed("String") => {
-                        let val: String = row.get(index)?;
-                        hash_map.insert(
-                            col_name.to_string(),
-                            AttributeValue::String(val)
-                        );
-                    },
-                    
-                    Cow::Borrowed("Int8") | Cow::Borrowed("Int16") | Cow::Borrowed("Int32") | Cow::Borrowed("Int64") => {
-                        let val: i64 = row.get(index)?;
-                        hash_map.insert(
-                            col_name.to_string(),
-                            AttributeValue::Float(val as f32),
-                        );
-                    },
-                    _ => {let _ = String::new();}
-                    
-                }
-                hash_maps.insert(index,hash_map.clone());
             }
+            hash_maps.push(hash_map.clone());
         }
     
-       
-    
-
-
-        // let client = postgres_pool.get().await.unwrap();
-        // let stmt = client.prepare_cached(query).await.unwrap();
-        // let rows = client.query(&stmt, &[]).await.unwrap();
-        // // let column_head: Vec<String> = vec!["id".to_string(), "title".to_string()];
-
-        // let hash_maps: Vec<HashMap<String, AttributeValue>> = rows
-        // .iter()
-        // .map(|row| postgres_row_to_hash_map(&column_headers, row))
-        // .collect();
-        // let response_data = hash_maps;
         return Ok(DataResponse { data: hash_maps });
     }
     else{
         Err(PersistenceError::Unknown)
     }
 }
-// pub async fn clickhouse_test() -> ClickhouseResult<()> {
+
+pub async fn fetch_all_tables_clickhouse(
+    dbpool: &DBPool,
+) -> Result<Vec<String>, PersistenceError> {
+    let query = "SELECT name
+    FROM system.tables
+    WHERE database = currentDatabase();
+    ";
+    let sample_query: &String = &String::from(query);
+    let column_headers: Vec<String> = vec![String::from("name")];
+    let table_data_response = run_query_clickhouse(&column_headers,sample_query,dbpool.clone()).await?;
+    let table_names: Vec<String> = table_data_response.data
+    .iter()
+    .filter_map(|hash_map| hash_map.get("name"))
+    .map(|attr_value| match attr_value {
+        AttributeValue::String(s) => s.clone(),
+        _ => String::new(), // Handle other cases if needed
+    })
+    .collect();
+    println!("{}",table_names.join(","));
+    Ok(table_names)
+
+}
+pub async fn fetch_all_columns_clickhouse(
+    dbpool: &DBPool, table_name: &str
+) -> Result<Vec<Column>, PersistenceError> {
+    let query = format!(
+        "SELECT name AS column_name, type AS data_type
+        FROM system.columns
+        WHERE database = currentDatabase() AND table = '{}';",
+        table_name
+    );
+    let sample_query: &String = &String::from(query);
+    let column_headers: Vec<String> = vec![String::from("column_name"),String::from("column_type")];
+    let column_data_response = run_query_clickhouse(&column_headers,sample_query,dbpool.clone()).await?;
+    let columns: Vec<Column> = column_data_response
+        .data
+        .iter()
+        .map(|entry| {
+            let name = match &entry.get("column_name") {
+                Some(AttributeValue::String(s)) => s.clone(),
+                _ => String::new(), // Handle the case where the attribute is not a String
+            };
+
+            let datatype = match &entry.get("column_type") {
+                Some(AttributeValue::String(s)) => s.clone(),
+                _ => String::new(), // Handle the case where the attribute is not a String
+            };
+
+            Column { name, datatype }
+        })
+        .collect();
+    println!("{:?}", columns);    
+    Ok(columns)
+}
 
 // }
 // pub fn get_clickhouse_pool(dbpool: &DBPool) -> Option<&ClickhouseClientWrapper> {
