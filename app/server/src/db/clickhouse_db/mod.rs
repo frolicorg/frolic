@@ -8,7 +8,19 @@ use futures_util::StreamExt;
 use std::collections::HashMap;
 use std::borrow::Cow;
 
+pub static TABLE_QUERY: &str = "SELECT name
+FROM system.tables
+WHERE database = currentDatabase();
+";
 
+pub fn column_query(table_name: &str)-> String {
+    format!(
+        "SELECT name AS column_name, type AS data_type
+        FROM system.columns
+        WHERE database = currentDatabase() AND table = '{}';",
+        table_name)
+
+}
 
 pub fn clickhouse_pool_builder(db_user:&str,db_password:&str,db_host:&str,db_port:&u16,db_name:&str) -> Pool{
 
@@ -83,97 +95,3 @@ pub async fn run_query_clickhouse(
         Err(PersistenceError::Unknown)
     }
 }
-
-pub async fn fetch_all_tables_clickhouse(
-    dbpool: &DBPool,
-) -> Result<Vec<String>, PersistenceError> {
-    let query = "SELECT name
-    FROM system.tables
-    WHERE database = currentDatabase();
-    ";
-    let sample_query: &String = &String::from(query);
-    let column_headers: Vec<String> = vec![String::from("name")];
-    let table_data_response = run_query_clickhouse(&column_headers,sample_query,dbpool.clone()).await?;
-    let table_names: Vec<String> = table_data_response.data
-    .iter()
-    .filter_map(|hash_map| hash_map.get("name"))
-    .map(|attr_value| match attr_value {
-        AttributeValue::String(s) => s.clone(),
-        _ => String::new(), // Handle other cases if needed
-    })
-    .collect();
-    println!("{}",table_names.join(","));
-    Ok(table_names)
-
-}
-pub async fn fetch_all_columns_clickhouse(
-    dbpool: &DBPool, table_name: &str
-) -> Result<Vec<Column>, PersistenceError> {
-    let query = format!(
-        "SELECT name AS column_name, type AS data_type
-        FROM system.columns
-        WHERE database = currentDatabase() AND table = '{}';",
-        table_name
-    );
-    let sample_query: &String = &String::from(query);
-    let column_headers: Vec<String> = vec![String::from("column_name"),String::from("column_type")];
-    let column_data_response = run_query_clickhouse(&column_headers,sample_query,dbpool.clone()).await?;
-    let columns: Vec<Column> = column_data_response
-        .data
-        .iter()
-        .map(|entry| {
-            let name = match &entry.get("column_name") {
-                Some(AttributeValue::String(s)) => s.clone(),
-                _ => String::new(), // Handle the case where the attribute is not a String
-            };
-
-            let datatype = match &entry.get("column_type") {
-                Some(AttributeValue::String(s)) => s.clone(),
-                _ => String::new(), // Handle the case where the attribute is not a String
-            };
-
-            Column { name, datatype }
-        })
-        .collect();
-    println!("{:?}", columns);    
-    Ok(columns)
-}
-
-// }
-// pub fn get_clickhouse_pool(dbpool: &DBPool) -> Option<&ClickhouseClientWrapper> {
-//     match dbpool {
-//         DBPool::clickhouse(clickhouse_pool) => Some(clickhouse_pool),
-//         _ => None,
-//     }
-// }
-
-// pub async fn run_query_clickhouse(
-//     column_headers: &Vec<String>,
-//     query: &String,
-//     pool: DBPool,
-// ) -> Result<DataResponse, PersistenceError>{
-//     log::info!("Executing PostGres Query");
-
-//     if let Some(clickhouse_pool) = get_clickhouse_pool(&pool) {
-
-//         let mut cursor = clickhouse_pool.unwrap()
-//         .query("SELECT ?fields FROM some WHERE no BETWEEN ? AND ?")
-//         .bind(500)
-//         .bind(504)
-//         .fetch::<MyRow<'_>>()?;
-    
-//         while let Some(row) = cursor.next().await? { 
-//             println!("Printing");
-//         }
-//         // let stmt = client.prepare_cached(query).await.unwrap();
-//         // let rows = client.query(&stmt, &[]).await.unwrap();
-//         // let column_head: Vec<String> = vec!["id".to_string(), "title".to_string()];
-
-//         let mut hash_map: HashMap<String, AttributeValue> = HashMap::new();
-//         let response_data = hash_map;
-//         return Ok(DataResponse { data: response_data });
-//     }
-//     else{
-//         Err(PersistenceError::Unknown)
-//     }
-// }

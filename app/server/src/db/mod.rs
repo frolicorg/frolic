@@ -13,9 +13,9 @@ use log::error;
 use std::fmt;
 
 // use clickhouse::{Client as ClickhouseClient};
-use postgres::{postgres_pool_builder,fetch_all_tables_postgres,fetch_all_columns_postgres,run_query_postgres};
-use mysql_db::{mysql_pool_builder,fetch_all_tables_mysql,fetch_all_columns_mysql,run_query_mysql};
-use clickhouse_db::{clickhouse_pool_builder,run_query_clickhouse,fetch_all_columns_clickhouse,fetch_all_tables_clickhouse};
+use postgres::{postgres_pool_builder,run_query_postgres};
+use mysql_db::{mysql_pool_builder,run_query_mysql};
+use clickhouse_db::{clickhouse_pool_builder,run_query_clickhouse};
 
 // use tokio::runtime;
 
@@ -107,39 +107,73 @@ pub async fn run_query(
 
 
 pub async fn fetch_all_tables(pool: &DBPool, db_type: &str) -> Result<Vec<String>, PersistenceError> {
+    let mut query = String::new();
     match db_type {
         "mysql" => {
-            log::info!("Fetching Mysql Tables");
-            fetch_all_tables_mysql(pool)
+            query = mysql_db::TABLE_QUERY.to_string();
         }
         "postgres" => {
-            log::info!("Fetching Postgres Tables");
-            fetch_all_tables_postgres(pool).await
+            query = postgres::TABLE_QUERY.to_string();
         }
         "clickhouse" => {
-            log::info!("Fetching Clickhouse Tables");
-            fetch_all_tables_clickhouse(pool).await
+            query = clickhouse_db::TABLE_QUERY.to_string();
         }
-        _ => Err(PersistenceError::Unknown),
+        _ => return Err(PersistenceError::Unknown),
     }
+
+    let sample_query: &String = &String::from(query);
+    let column_headers: Vec<String> = vec![String::from("table_name")];
+    let table_data_response = run_query(&column_headers,sample_query,pool.clone(),db_type).await?;
+    let table_names: Vec<String> = table_data_response.data
+    .iter()
+    .filter_map(|hash_map| hash_map.get("table_name"))
+    .map(|attr_value| match attr_value {
+        AttributeValue::String(s) => s.clone(),
+        _ => String::new()
+    })
+    .collect();
+    Ok(table_names)
+    
 }
 
+
 pub async fn fetch_columns_for_table(pool: &DBPool, table_name: &str,db_type:&str) -> Result<Vec<Column>, PersistenceError> {
+    let mut query = String::new();
     match db_type {
         "mysql" => {
-            log::info!("Fetching Mysql Columns");
-            fetch_all_columns_mysql(pool,table_name)
+            query = mysql_db::column_query(table_name);
         }
         "postgres" => {
-            log::info!("Fetching Postgres Columns");
-            fetch_all_columns_postgres(pool,table_name).await
+            query = postgres::column_query(table_name);
         }
         "clickhouse" => {
-            log::info!("Fetching Clickhouse Columns");
-            fetch_all_columns_clickhouse(pool,table_name).await
+            query = clickhouse_db::column_query(table_name);
         }
-        _ => Err(PersistenceError::Unknown),
+        _ => return Err(PersistenceError::Unknown),
     }
+
+        let sample_query: &String = &String::from(query);
+    let column_headers: Vec<String> = vec![String::from("column_name"),String::from("column_type")];
+    let column_data_response = run_query(&column_headers,sample_query,pool.clone(),db_type).await?;
+    let columns: Vec<Column> = column_data_response
+        .data
+        .iter()
+        .map(|entry| {
+            let name = match &entry.get("column_name") {
+                Some(AttributeValue::String(s)) => s.clone(),
+                _ => String::new(), // Handle the case where the attribute is not a String
+            };
+
+            let datatype = match &entry.get("column_type") {
+                Some(AttributeValue::String(s)) => s.clone(),
+                _ => String::new(), // Handle the case where the attribute is not a String
+            };
+
+            Column { name, datatype }
+        })
+        .collect();   
+    Ok(columns)
+
 }
 
 //execute query function is required - output will be a Result<DataResponse, PersistenceError>

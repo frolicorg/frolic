@@ -5,6 +5,14 @@ use crate::db::PersistenceError;
 use mysql::prelude::Queryable;
 use mysql::from_value_opt;
 
+pub static TABLE_QUERY: &str = "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()";
+
+pub fn column_query(table_name: &str)-> String {
+    format!(
+        "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = '{}'",
+        table_name)
+}
+
 pub fn mysql_pool_builder(db_user:&str,db_password:&str,db_host:&str,db_port:&u16,db_name:&str) -> mysql::Pool{
     let builder = mysql::OptsBuilder::new()
     .ip_or_hostname(Some(db_host))
@@ -61,40 +69,6 @@ pub fn sql_row_to_hash_map(
 
 fn round_float_decimals(value: &f32) -> f32 {
     (value * 100.0).round() / 100.0
-}
-
-pub fn fetch_all_tables_mysql(dbpool: &DBPool) -> Result<Vec<String>, PersistenceError> {
-    if let Some(mysql_pool) = get_mysql_pool(dbpool) {
-        let mut conn = match mysql_pool.get_conn() {
-            Ok(conn) => conn,
-            Err(err) => return Err(PersistenceError::MysqlError(err)),
-        };
-        let query = "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()";
-        let tables: Vec<String> = conn.query_map(query, |table_name| table_name)?;
-        Ok(tables)
-    } else {
-        Err(PersistenceError::Unknown)
-    }
-}
-
-pub fn fetch_all_columns_mysql(dbpool: &DBPool, table_name: &str) -> Result<Vec<Column>, PersistenceError>{
-    if let Some(mysql_pool) = get_mysql_pool(dbpool) {
-        let mut conn = match mysql_pool.get_conn() {
-            Ok(conn) => conn,
-            Err(err) => return Err(PersistenceError::MysqlError(err)),
-        };
-        let query = format!(
-            "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = '{}'",
-            table_name
-        );
-        let columns: Vec<Column> = conn.query_map(query, |(column_name, datatype)| Column {
-            name: column_name,
-            datatype,
-        })?;
-        Ok(columns)
-    } else {
-        Err(PersistenceError::Unknown)
-    }  
 }
 
 pub async fn run_query_mysql(
