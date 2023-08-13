@@ -112,7 +112,7 @@ You can start using the docker container path to query your data.
 
 ## Integrations
 
-We currently support MySQL database. We will add integrations with other databases in the future.
+We currently support MySQL, Postgres & Clickhouse database. We will add integrations with other databases in the future.
 
 ## Why Rust?
 
